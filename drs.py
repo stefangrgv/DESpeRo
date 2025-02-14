@@ -128,7 +128,7 @@ class UI:
             add_vhelio_to_fits(store)
 
         if self.bias.get():
-            # do more tests to make sure bias correction works as intended
+            # fix bias correction
             store.create_master_biases()
             correct_for_bias(store)
 

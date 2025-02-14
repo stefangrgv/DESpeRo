@@ -2,8 +2,6 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-# from scipy.interpolate import splev, splrep
 from scipy.signal import find_peaks
 
 from src.parameters import (
@@ -61,7 +59,24 @@ def _get_brightest_neighbouring_pixel_in_order(image: np.ndarray, row: int, colu
         return all_neighbours[-1]
 
 
-def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, found: bool) -> list:
+def _trace_direction(
+    image: np.ndarray, starting_row: int, starting_column: int, direction: str, pixels: list[dict]
+) -> list[dict]:
+    row, column = starting_row, starting_column
+    while column >= CUTOFF if direction == "left" else column <= image.shape[1] - 1 - CUTOFF:
+        pixel = _get_brightest_neighbouring_pixel_in_order(image, row, column, direction)
+        if pixel is None:
+            # signal lost
+            break
+        if pixel["intensity"] < INTENSITY_THRESHOLD and len(pixels) < 10:
+            # tracing a cosmic
+            return []
+        pixels.append(pixel)
+        column, row = pixel["column"], pixel["row"]
+    return pixels
+
+
+def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, found: bool) -> list[dict]:
     pixels = [
         {
             "row": starting_row,
@@ -73,49 +88,18 @@ def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, fou
         print(f"below intensity threshold: {starting_column}, {starting_row}, {pixels[0]['intensity']}")
         return []
 
-    # go left
-    row = starting_row
-    column = starting_column
-    while column >= CUTOFF:
-        pixel = _get_brightest_neighbouring_pixel_in_order(image, row, column, "left")
-        if pixel is None:
-            # signal lost
-            break
-        else:
-            if pixel["intensity"] < INTENSITY_THRESHOLD and len(pixels) < 10:
-                # tracing a cosmic
-                pixels = []
-                break
-            pixels.append(pixel)
-            column, row = pixel["column"], pixel["row"]
-    # go right
-    row = starting_row
-    column = starting_column
-    while column <= image.shape[1] - 1 - CUTOFF:
-        pixel = _get_brightest_neighbouring_pixel_in_order(image, row, column, "right")
-        if pixel is None:
-            # signal lost
-            break
-        else:
-            if pixel["intensity"] < INTENSITY_THRESHOLD and len(pixels) < 10:
-                # tracing a cosmic
-                pixels = []
-                break
-            pixels.append(pixel)
-            column, row = pixel["column"], pixel["row"]
+    pixels = _trace_direction(image, starting_row, starting_column, "left", [])
+    pixels = _trace_direction(image, starting_row, starting_column, "right", pixels)
     pixels.sort(key=lambda x: x["column"])
 
     # check if order overlaps an already found one
     already_found_pixels = []
     for f in found:
         already_found_pixels += f.tolist()
-    overlapping_pixels_count = 0
     for n, pixel in enumerate(pixels):
-        if n % 100 == 0:  # take only 1/100 of the pixels to increase speed
+        if n % 100 == 0:
             if [pixel["column"], pixel["row"]] in already_found_pixels:
-                overlapping_pixels_count += 1
-    if overlapping_pixels_count > 0:
-        return []
+                return []
     return pixels
 
 
@@ -158,10 +142,6 @@ def extract_2d_spectra(store: Any, observations: list[Any]) -> None:
             order = Order(observation, coordinates)
             order.columns = []
             order.intensity = []
-            order.uncombined_intensity = {"0": []}
-            for j in range(1, APERTURE_HEIGHT):
-                order.uncombined_intensity[f"{j}"] = []
-                order.uncombined_intensity[f"{-j}"] = []
             for i in range(len(coordinates.rows)):
                 row = int(coordinates.rows[i])
                 column = int(coordinates.columns[i])

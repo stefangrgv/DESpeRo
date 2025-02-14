@@ -9,8 +9,7 @@ from scipy.signal import correlate
 from src.fit import find_line_peak, gaussian
 from src.parameters import CUTOFF
 
-PLOT_SPECTRA = False
-EXPORT_SPECTRA = True
+PLOT_SPECTRA = False  # for plot for paper
 
 
 def fit_chebyshev(points: list[int, float], degree: int = 3) -> np.ndarray:
@@ -27,6 +26,7 @@ def _get_comp_shift_from_standard(standard_intensity: float, comp_intensity: flo
 
 
 def calibrate_comp_spectra(store: Any) -> None:
+    print(f"Calibrating comp spectra...")
     try:
         comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
     except FileNotFoundError as err:
@@ -34,8 +34,6 @@ def calibrate_comp_spectra(store: Any) -> None:
         print(err)
         sys.exit(1)
     for comp in store.comp:
-        comp_filename = comp.fits_file.split("/")[-1].split(".fits")[0]
-        print(f"Calibrating comp spectrum {comp_filename}...")
         for order_number in range(len(comp.orders)):
             comp.orders[order_number].intensity = np.asarray(comp.orders[order_number].intensity, dtype=np.float16)
             comp.orders[order_number].intensity /= np.max(comp.orders[order_number].intensity)

@@ -176,3 +176,4 @@ plot/
 pyraf/
 */pyraf/
 comp_standard.npy
+logfile

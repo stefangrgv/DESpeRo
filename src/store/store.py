@@ -3,7 +3,7 @@ from datetime import datetime
 
 import numpy as np
 
-import src.utils as utils
+from src import utils
 from src.store.master_bias import MasterBias
 from src.store.master_flat import MasterFlat
 from src.store.observation import Observation

@@ -10,7 +10,7 @@ def find_line_peak(x, y, approx_peak):
     x = np.asarray(x)
     y = np.asarray(y)
     # Find a small window around the approximate peak
-    window_size = 5  # Adjust based on expected peak width
+    window_size = 5
     mask = (x > approx_peak - window_size) & (x < approx_peak + window_size)
     x_window = x[mask]
     y_window = y[mask]
