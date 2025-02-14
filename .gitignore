@@ -169,3 +169,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Project-specific
+pyproject.toml
+plot/
+pyraf/
+*/pyraf/
+comp_standard.npy
