@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import correlate
 
-from src.fit import find_line_peak, gaussian
+from src.fit import fit_line_with_gaussian, gaussian
 from src.parameters import CUTOFF
 
 PLOT_SPECTRA = False  # for plot for paper
 
 
-def fit_chebyshev(points: list[int, float], degree: int = 3) -> np.ndarray:
+def fit_chebyshev(lines: list[int, float], degree: int = 3) -> np.ndarray:
     px, wl = ([], [])
-    for p in points:
+    for p in lines:
         px.append(p[0])
         wl.append(p[1])
     return np.polynomial.chebyshev.Chebyshev.fit(px, wl, deg=degree)
@@ -53,80 +53,40 @@ def calibrate_comp_spectra(store: Any) -> None:
                 # Order does not match any order in the comparison standard - will be ignored
                 continue
             i_comp = i_standard - order_shift
-            has_points = (
-                hasattr(comp_standard.orders[i_standard].order_coordinates, "points")
-                and len(comp_standard.orders[i_standard].order_coordinates.points) > 0
+            has_lines = (
+                hasattr(comp_standard.orders[i_standard].order_coordinates, "lines")
+                and len(comp_standard.orders[i_standard].order_coordinates.lines) > 0
             )
-            # TODO: when finished, has_points will always be true
-            if has_points:
+            # TODO: when finished, has_lines will always be true
+            if has_lines:
                 comp_intensity = np.asarray(comp.orders[i_comp].intensity, dtype=np.float16)
                 comp_intensity /= np.max(comp_intensity)
+                comp_intensity -= np.min(comp_intensity)
                 pixel_shift = _get_comp_shift_from_standard(comp_standard.orders[i_standard].intensity, comp_intensity)
-                comp_points = []
-                for point in comp_standard.orders[i_standard].order_coordinates.points:
-                    # plt.axvline(point[0], color="green", ls="--")
-                    line_fit_coeffs = find_line_peak(
-                        comp.orders[i_comp].order_coordinates.columns, comp_intensity, int(point[0] - CUTOFF)
-                    )
-                    fit_x = np.linspace(0, 2048, 2048 * 16)
-                    line_fit = gaussian(
-                        fit_x,
-                        line_fit_coeffs["a"],
-                        line_fit_coeffs["x0"],
-                        line_fit_coeffs["sigma"],
-                        line_fit_coeffs["offset"],
-                    )
-                    comp_points.append((float(line_fit_coeffs["x0"]), point[1]))
+                comp_lines = []
+                for line in comp_standard.orders[i_standard].order_coordinates.lines:
+                    # plt.axvline(line[0], color="green", ls="--")
+                    try:
+                        line_fit_coeffs = fit_line_with_gaussian(
+                            comp.orders[i_comp].order_coordinates.columns, comp_intensity, int(line[0])
+                        )
+                        fit_x = np.linspace(0, 2048, 2048 * 16)
+                        line_fit = gaussian(
+                            fit_x,
+                            line_fit_coeffs["a"],
+                            line_fit_coeffs["x0"],
+                            line_fit_coeffs["sigma"],
+                            line_fit_coeffs["offset"],
+                        )
+                        comp_lines.append((float(line_fit_coeffs["x0"]), line[1]))
+                    except RuntimeError:  # gaussian fit did not converge: line not found
+                        continue
                 #     plt.plot(fit_x, line_fit, color="purple", label="gaussian fit")
                 #     plt.axvline(line_fit_coeffs["x0"], color="purple", ls="--")
                 # plt.legend()
                 # plt.show()
-                cheby_fit = fit_chebyshev(comp_points, degree=3)
+                cheby_fit = fit_chebyshev(comp_lines, degree=3)
                 comp.orders[i_comp].wavelength = cheby_fit(np.asarray(comp.orders[i_comp].columns))
-
-
-def _draw_comp_for_journal(
-    comp_standard: Any,
-    comp: Any,
-    i_standard: int,
-    i_comp: int,
-    has_points: bool,
-    order_shift: int,
-    comp_filename: str,
-) -> None:
-    plt.title(f"i_standard = {i_standard}, i_comp = {i_comp}")
-    plt.plot(
-        comp_standard.orders[i_standard].order_coordinates.columns,
-        comp_standard.orders[i_standard].intensity,
-        color="black",
-        label="standard",
-        alpha=0.5,
-    )
-    plt.plot(
-        comp.orders[i_comp].order_coordinates.columns,
-        comp.orders[i_comp].intensity,
-        color="green",
-        label="comp",
-        alpha=0.5,
-    )
-    if has_points:
-        for point in comp_standard[i_standard]["order_coordinates"]["points"]:
-            plt.axvline(point[0], color="red", ls="--")
-            # TODO: y should have an increment
-            plt.text(
-                x=point[0] + order_shift,
-                y=np.max(comp.orders[i_comp].intensity) / 2,
-                s=f"{point[1]}",
-                color="red",
-                alpha=0.5,
-            )
-    plt.legend()
-    os.makedirs(f"comp/{comp_filename}", exist_ok=True)
-    # plt.savefig(f"comp/{comp_filename}/order_{i_standard}.png", dpi=500)
-    plt.show()
-    plt.cla()
-    plt.clf()
-    plt.close()
 
 
 def get_comp_for_stellar(store: Any) -> None:

@@ -3,13 +3,7 @@ from typing import Any
 import numpy as np
 
 
-def _fit_continuum(
-    wavelength: list[float] | np.ndarray,
-    intensity: list[float],
-    absorption_threshold: int = 60,
-    emission_threshold: int = 90,
-) -> np.ndarray:
-    intensity = np.asarray(intensity)
+def _get_part_indexes(wavelength: list | np.ndarray) -> list[list]:
     n = len(wavelength)
     parts_to_split_into = 6
     large_part_fraction = 1 / (parts_to_split_into - 1)
@@ -19,12 +13,24 @@ def _fit_continuum(
             parts_index_ranges.append([0, int((large_part_fraction / 2) * n)])
         elif i == parts_to_split_into - 1:
             start = parts_index_ranges[-1][1]
-            parts_index_ranges.append([start])
+            parts_index_ranges.append([start, n])
         else:
             start = parts_index_ranges[-1][1]
             end = int(start + large_part_fraction * n)
             parts_index_ranges.append([start, end])
     part_indexes = [np.asarray([i for i in range(part[0], part[1])]) for part in parts_index_ranges]
+    return part_indexes, parts_index_ranges
+
+
+def _fit_continuum(
+    wavelength: list[float] | np.ndarray,
+    intensity: list[float],
+    absorption_threshold: int = 60,
+    emission_threshold: int = 90,
+) -> np.ndarray:
+    # TODO: refactor
+    intensity = np.asarray(intensity)
+    part_indexes, parts_index_ranges = _get_part_indexes(wavelength)
     continuum_indices = []
     for part_number in range(len(parts_index_ranges)):
         (ind_start, ind_end) = parts_index_ranges[part_number]
@@ -40,14 +46,15 @@ def _fit_continuum(
 
 
 def normalize(store: Any) -> None:
+    print("Normalizing intensity...")
     for stellar in store.stellar:
-        print(f"Normalizing {stellar.fits_file}...")
         for i, order in enumerate(stellar.orders):
-            try:
-                continuum = _fit_continuum(order.wavelength, order.intensity)
-                order.normalized_intensity = order.intensity / continuum
-            except Exception as e:
-                print(f"\tCould not normalize order #{i}: {e}")
+            if len(order.wavelength):
+                try:
+                    continuum = _fit_continuum(order.wavelength, order.intensity)
+                    stellar.orders[i].normalized_intensity = order.intensity / continuum
+                except Exception as e:
+                    print(f"\tCould not normalize order #{i}: {e}")
 
 
 def stitch_oned(store: Any) -> None:

@@ -1,132 +1,121 @@
+from typing import Any
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from lines import lines
-from save import save_comp_as_npy
-from scipy.signal import find_peaks
 
 from pyraf import iraf
 from src.apall import extract_2d_spectra, find_orders_coordinates
 from src.calibrate import fit_chebyshev
-from src.fit import find_line_peak, gaussian
+from src.fit import fit_line_with_gaussian, gaussian
 from src.initial_corrections import correct_for_bias, correct_for_flat
 from src.store.store import Store
 
-LIVE_PLOT = True
-USE_GAUSSIAN_FIT = False
-SUGGEST_PEAKS = False
-SHOW_APERTURES = True
+LIVE_PLOT = False
+GAUSS_FIT_WINDOW = 20
 
-correct_bias = False
-correct_flat = False
+CORRECT_BIAS = False
+CORRECT_FLAT = False
 
 matplotlib.use("TkAgg")
 
 
-def plot_comp_standard(lines):
-    comp_standard = np.load("../comp_standard.npy", allow_pickle=True).tolist()
-    for order in comp_standard.orders:
-        number = order.order_coordinates.number
-        if number < 14:
-            continue
-        title = f"Order #{number}"
-        if SUGGEST_PEAKS:
-            order_peaks_column, _ = find_peaks(order.intensity, prominence=0.1)
-            inc_y_shift_peaks = np.max(order.intensity) / len(order_peaks_column)
-        inc_y_shift = np.max(order.intensity) / 10
-        if lines.get(number, None) is not None and len(lines[number]):
-            # plt.rcParams.update({"font.size": 24})
-            # if LIVE_PLOT:
-            inc_y_shift = np.max(order.intensity) / (len(lines[number]) + 1)
-            _, ax = plt.subplots(nrows=2, sharex=True)
-            ax[1].set_ylabel(r"Wavelength (${\AA}$)")
-            ax[1].set_xlabel("Column number")
-            ax[0].set_ylabel("Normalized intensity")
-            cheby_fit = fit_chebyshev(lines.get(number), degree=3)
-            order.wavelength = cheby_fit(order.order_coordinates.columns)
-            ax[0].set_title(title)
-            ax[1].plot(order.order_coordinates.columns, order.wavelength, color="green")
-            ax[0].plot(order.order_coordinates.columns, order.intensity, color="black")
-            if SUGGEST_PEAKS:
-                for i, col in enumerate(order_peaks_column):
-                    ax[1].axvline(col, color="green", ls="--", lw=2)
-                    ax[1].text(x=col, y=(i + 1) * inc_y_shift, s=f"{col}", color="green")
-            for i, point in enumerate(lines[number]):
-                ax[1].scatter(point[0], point[1], color="black", s=50)
-                ax[0].axvline(point[0], color="red", ls="--", lw=2)
-                ax[0].text(x=point[0], y=(i + 1) * 1.5 * inc_y_shift, s=f"{point[1]}", color="black")
-            plt.show()
+def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) -> None:
+    order = comp_standard.orders[order_number]
+    _, ax = plt.subplots(nrows=2, sharex=True)
+    ax[0].set_title(f"Order #{order_number}")
+    ax[0].plot(order.order_coordinates.columns, order.intensity, color="black", lw=2)
+    ax[0].set_ylabel("Normalized intensity")
+    ax[1].set_ylabel(r"Wavelength (${\AA}$)")
+    ax[1].set_xlabel("Column number")
+    order_lines = lines.get(order_number, None)
+    if order_lines is not None and len(order_lines):
+        # plt.rcParams.update({"font.size": 24})
+        inc_y_shift = np.max(order.intensity) / (len(order_lines) + 1)
+        cheby_fit = fit_chebyshev(order_lines, degree=3)
+        order.wavelength = cheby_fit(order.order_coordinates.columns)
+        ax[1].plot(order.order_coordinates.columns, order.wavelength, color="green", lw=2)
+        for i, line in enumerate(order_lines):
+            params = gauss_params[i]
+            if len(params):  # gaussian fit exists for line
+                # only draw the gaussian around the line peak
+                x_fit = np.linspace(params["x0"] - GAUSS_FIT_WINDOW, params["x0"] + GAUSS_FIT_WINDOW, 100)
+                gauss = gaussian(x_fit, params["a"], params["x0"], params["sigma"], params["offset"])
+                ax[0].axvline(params["x0"], color="red", ls="--", lw=2)
+                ax[0].text(x=params["x0"], y=(i + 1) * inc_y_shift, s=f"({params['x0']:.1f}, {line[1]})", color="black")
+                ax[1].scatter(params["x0"], line[1], color="black", s=50)
+                ax[0].plot(x_fit, gauss, color="red", alpha=0.5, lw=2)
+            else:  # no fit for the line
+                ax[0].axvline(line[0], color="red", ls="--", lw=2)
+                ax[0].text(x=line[0], y=(i + 1) * inc_y_shift, s=f"({line[0]}, {line[1]})", color="black")
+                ax[1].scatter(line[0], line[1], color="black", s=50)
+    plt.show()
 
 
-def create_comp_standard():
+def calibrate_order(comp_standard: Any, order_number: int) -> None:
+    comp_standard.orders[order_number].intensity = np.asarray(
+        comp_standard.orders[order_number].intensity, dtype=np.float16
+    )
+    comp_standard.orders[order_number].intensity /= np.max(comp_standard.orders[order_number].intensity)
+    comp_standard.orders[order_number].intensity -= np.min(comp_standard.orders[order_number].intensity)
+    order_lines = lines.get(order_number, None)
+    if order_lines is not None:
+        exact_line_positions = []
+        gauss_params = []
+        for line in order_lines:
+            try:
+                gauss = fit_line_with_gaussian(
+                    comp_standard.orders[order_number].order_coordinates.columns,
+                    comp_standard.orders[order_number].intensity,
+                    line[0],
+                )
+                gauss_params.append(gauss)
+                exact_line_positions.append((gauss["x0"], line[1]))
+            except RuntimeError as e:  # gaussian fit did not converge, use line without fitting
+                print(e)
+                gauss_params.append([])
+                exact_line_positions.append((line[0], line[1]))
+        comp_standard.orders[order_number].order_coordinates.lines = exact_line_positions
+        if LIVE_PLOT:
+            plot_order(comp_standard, order_number, gauss_params)
+
+
+def create_comp_standard() -> None:
     directory = input("Enter path to observations directory: ")
     store = Store(directory)
     store.load_journal_from_file()
 
-    if correct_bias or correct_flat:
+    if CORRECT_BIAS or CORRECT_FLAT:
         iraf.noao()
         iraf.rv()
         iraf.imred()
         iraf.ccd()
 
-    if correct_bias:
-        # do more tests to make sure bias correction works as intended
+    if CORRECT_BIAS:
+        # TODO: do more tests to make sure bias correction works as intended
         store.create_master_biases()
         correct_for_bias(store)
 
-    if correct_flat:
+    if CORRECT_FLAT:
         store.create_master_flats()
-        find_orders_coordinates(store, use_master_flat=True, draw=SHOW_APERTURES)
+        find_orders_coordinates(store, use_master_flat=True, draw=True)
         correct_for_flat(store)
     else:
-        find_orders_coordinates(store, use_master_flat=False, draw=SHOW_APERTURES)
+        find_orders_coordinates(store, use_master_flat=False, draw=True)
     extract_2d_spectra(store, store.comp)
 
     comp_standard = store.comp[0]
-    for i, order in enumerate(comp_standard.orders):
-        comp_standard.orders[i].intensity = np.asarray(comp_standard.orders[i].intensity, dtype=np.float16)
-        comp_standard.orders[i].intensity /= np.max(comp_standard.orders[i].intensity)
-        points_in_order = lines.get(i, None)
-        if points_in_order is not None:
-            comp_standard.orders[i].order_coordinates.lines = points_in_order
-            fit_points = []
-            for point in points_in_order:
-                # plot the gaussians on the spectrum to see if they're good
-                if USE_GAUSSIAN_FIT:
-                    try:
-                        gaussian_fit_parameters = find_line_peak(
-                            order.order_coordinates.columns,
-                            order.intensity,
-                            point[0],
-                        )
-                        if LIVE_PLOT:
-                            gauss_fit = gaussian(
-                                order.order_coordinates.columns,
-                                gaussian_fit_parameters["a"],
-                                gaussian_fit_parameters["x0"],
-                                gaussian_fit_parameters["sigma"],
-                                gaussian_fit_parameters["offset"],
-                            )
-                            plt.plot(
-                                order.order_coordinates.columns,
-                                gauss_fit,
-                                color="red",
-                                alpha=0.5,
-                            )
-                        fit_points.append((gaussian_fit_parameters["x0"], point[1]))
-                    except RuntimeError as e:
-                        print(e)
-                        fit_points.append((point[0], point[1]))
-                else:
-                    fit_points.append((point[0], point[1]))
-            if LIVE_PLOT:
-                plt.show()
-            comp_standard.orders[i].order_coordinates.lines = fit_points
+    for i in range(len(comp_standard.orders)):
+        calibrate_order(comp_standard, i)
 
+    comp_standard.raw_data = None  # raw data is not needed for calibration
+    import pdb
+
+    pdb.set_trace()
     return comp_standard
 
 
 if __name__ == "__main__":
     comp_standard = create_comp_standard()
     np.save("../comp_standard.npy", comp_standard, allow_pickle=True)
-    plot_comp_standard(lines)
