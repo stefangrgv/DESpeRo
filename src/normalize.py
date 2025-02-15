@@ -19,7 +19,7 @@ def _get_part_indexes(wavelength: list | np.ndarray) -> list[list]:
             end = int(start + large_part_fraction * n)
             parts_index_ranges.append([start, end])
     part_indexes = [np.asarray([i for i in range(part[0], part[1])]) for part in parts_index_ranges]
-    return part_indexes, parts_index_ranges
+    return part_indexes
 
 
 def _fit_continuum(
@@ -28,17 +28,16 @@ def _fit_continuum(
     absorption_threshold: int = 60,
     emission_threshold: int = 90,
 ) -> np.ndarray:
-    # TODO: refactor
     intensity = np.asarray(intensity)
-    part_indexes, parts_index_ranges = _get_part_indexes(wavelength)
+    part_indexes = _get_part_indexes(wavelength)
     continuum_indices = []
-    for part_number in range(len(parts_index_ranges)):
-        (ind_start, ind_end) = parts_index_ranges[part_number]
-        intensity_part = intensity[ind_start:ind_end]
+    for indexes in part_indexes:
+        ind_start, ind_end = indexes[0], indexes[-1]
+        intensity_part = intensity[ind_start : ind_end + 1]
         lower_threshold = np.percentile(intensity_part, absorption_threshold)
         upper_threshold = np.percentile(intensity_part, emission_threshold)
         continuum_mask = (intensity_part > lower_threshold) & (intensity_part < upper_threshold)
-        continuum_indices += part_indexes[part_number][continuum_mask].tolist()
+        continuum_indices += indexes[continuum_mask].tolist()
     continuum_wavelength = wavelength[continuum_indices]
     continuum_intensity = intensity[continuum_indices]
     cheby_fit = np.polynomial.chebyshev.Chebyshev.fit(continuum_wavelength, continuum_intensity, deg=5)

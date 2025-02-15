@@ -150,11 +150,10 @@ class UI:
         if self.vhelio.get():
             correct_for_vhelio(store)
 
+        # save_fits(store)
         normalize(store)
         # stitch_oned(store)
-        import pdb
-
-        pdb.set_trace()
+        # save_ascii(store)
 
 
 if __name__ == "__main__":
