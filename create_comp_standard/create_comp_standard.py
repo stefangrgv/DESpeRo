@@ -65,9 +65,9 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
     comp_standard.orders[order_number].intensity /= np.max(comp_standard.orders[order_number].intensity)
     comp_standard.orders[order_number].intensity -= np.min(comp_standard.orders[order_number].intensity)
     order_lines = lines.get(order_number, None)
+    gauss_params = []
     if order_lines is not None:
         exact_line_positions = []
-        gauss_params = []
         for line in order_lines:
             try:
                 gauss = fit_line_with_gaussian(
@@ -82,39 +82,15 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
                 gauss_params.append([])
                 exact_line_positions.append((line[0], line[1]))
         comp_standard.orders[order_number].order_coordinates.lines = exact_line_positions
-        if LIVE_PLOT:
-            plot_order(comp_standard, order_number, gauss_params)
+    if LIVE_PLOT:
+        plot_order(comp_standard, order_number, gauss_params)
 
 
 def create_comp_standard() -> None:
-    directory = os.getenv("COMP_STANDARD_DIR") or input("Enter path to observations directory: ")
-    store = Store(directory)
-    store.load_journal_from_file()
-
-    if CORRECT_BIAS or CORRECT_FLAT:
-        iraf.noao()
-        iraf.rv()
-        iraf.imred()
-        iraf.ccd()
-
-    if CORRECT_BIAS:
-        # TODO: do more tests to make sure bias correction works as intended
-        store.create_master_biases()
-        correct_for_bias(store)
-
-    if CORRECT_FLAT:
-        store.create_master_flats()
-        find_orders_coordinates(store, use_master_flat=True, draw=True)
-        correct_for_flat(store)
-    else:
-        find_orders_coordinates(store, use_master_flat=False, draw=True)
-    extract_2d_spectra(store, store.comp)
-
-    comp_standard = store.comp[0]
+    comp_standard = np.load("raw_comp_standard.npy", allow_pickle=True).tolist()
     for i in range(len(comp_standard.orders)):
         calibrate_order(comp_standard, i)
 
-    comp_standard.raw_data = None  # raw data is not needed for calibration
     return comp_standard
 
 

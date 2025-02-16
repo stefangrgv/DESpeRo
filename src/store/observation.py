@@ -13,6 +13,7 @@ class Observation:
         exposure_time: float | int,
         readtime: float | int,
         rdnoise: float | int,
+        load: bool = True,
     ):
         self.store = store
         self.fits_file = fits_file
@@ -24,5 +25,6 @@ class Observation:
         self.vhelio = None
         self.orders = []
 
-        _, raw_data = load_fits(self.fits_file)
-        self.raw_data = raw_data
+        if load:
+            _, raw_data = load_fits(self.fits_file)
+            self.raw_data = raw_data
