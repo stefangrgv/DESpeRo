@@ -26,6 +26,7 @@ def _get_comp_shift_from_standard(standard_intensity: float, comp_intensity: flo
 
 
 def calibrate_comp_spectra(store: Any) -> None:
+    # TODO: match comp with standard
     print(f"Calibrating comp spectra...")
     try:
         comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
@@ -62,7 +63,9 @@ def calibrate_comp_spectra(store: Any) -> None:
                 comp_intensity = np.asarray(comp.orders[i_comp].intensity, dtype=np.float16)
                 comp_intensity /= np.max(comp_intensity)
                 comp_intensity -= np.min(comp_intensity)
-                pixel_shift = _get_comp_shift_from_standard(comp_standard.orders[i_standard].intensity, comp_intensity)
+                rough_shift_estimate = _get_comp_shift_from_standard(
+                    comp_standard.orders[i_standard].intensity, comp_intensity
+                )
                 comp_lines = []
                 for line in comp_standard.orders[i_standard].order_coordinates.lines:
                     # plt.axvline(line[0], color="green", ls="--")
@@ -100,14 +103,7 @@ def get_comp_for_stellar(store: Any) -> None:
 
 
 def calibrate_stellar(store: Any) -> None:
+    print("Calibrating for wavelength...")
     for stellar in store.stellar:
-        fname = stellar.fits_file.split(".fits")[0]
-        print(f"Calibrating for lambda: {stellar.fits_file}...")
         for order_number in range(len(stellar.orders)):
             stellar.orders[order_number].wavelength = stellar.comp.orders[order_number].wavelength
-            if len(stellar.comp.orders[order_number].wavelength) and PLOT_SPECTRA:
-                os.makedirs(f"stellar/{fname}", exist_ok=True)
-                plt.plot(stellar.orders[order_number].wavelength, stellar.orders[order_number].intensity)
-                plt.savefig(f"stellar/{fname}/{str(order_number)}.eps")
-                plt.clf()
-                plt.cla()

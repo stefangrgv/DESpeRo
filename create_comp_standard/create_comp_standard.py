@@ -1,8 +1,10 @@
+import os
 from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+from dotenv import load_dotenv
 from lines import lines
 
 from pyraf import iraf
@@ -12,13 +14,14 @@ from src.fit import fit_line_with_gaussian, gaussian
 from src.initial_corrections import correct_for_bias, correct_for_flat
 from src.store.store import Store
 
-LIVE_PLOT = False
+LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20
 
 CORRECT_BIAS = False
 CORRECT_FLAT = False
 
 matplotlib.use("TkAgg")
+load_dotenv()
 
 
 def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) -> None:
@@ -36,6 +39,8 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
         cheby_fit = fit_chebyshev(order_lines, degree=3)
         order.wavelength = cheby_fit(order.order_coordinates.columns)
         ax[1].plot(order.order_coordinates.columns, order.wavelength, color="green", lw=2)
+        coeffs = [f"{coef:.2f}" for coef in cheby_fit.coef]
+        ax[1].text(0.2, 0.8, ", ".join(coeffs), transform=ax[1].transAxes, ha="center", va="center")
         for i, line in enumerate(order_lines):
             params = gauss_params[i]
             if len(params):  # gaussian fit exists for line
@@ -82,7 +87,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
 
 
 def create_comp_standard() -> None:
-    directory = input("Enter path to observations directory: ")
+    directory = os.getenv("COMP_STANDARD_DIR") or input("Enter path to observations directory: ")
     store = Store(directory)
     store.load_journal_from_file()
 
@@ -110,9 +115,6 @@ def create_comp_standard() -> None:
         calibrate_order(comp_standard, i)
 
     comp_standard.raw_data = None  # raw data is not needed for calibration
-    import pdb
-
-    pdb.set_trace()
     return comp_standard
 
 

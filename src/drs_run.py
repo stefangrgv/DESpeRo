@@ -12,6 +12,8 @@ from src.initial_corrections import (
     correct_for_vhelio,
 )
 from src.normalize import normalize, stitch_oned
+from src.save.as_ascii import save_as_ascii
+from src.save.as_fits import save_as_fits
 from src.store.store import Store
 from src.utils import add_vhelio_to_fits
 
@@ -25,7 +27,7 @@ class DRSRun:
         self.vhelio = vhelio
 
     def start(self):
-        store = Store()
+        store = Store(self.observation_dir)
         store.load_journal_from_file()
 
         if self.bias or self.flat or self.vhelio:
@@ -67,3 +69,7 @@ class DRSRun:
         normalize(store)
         # stitch_oned(store)
         # save_ascii(store)
+
+        for observation in store.stellar:
+            # save_as_fits(observation)
+            save_as_ascii(observation)

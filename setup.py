@@ -12,5 +12,6 @@ setup(
         "matplotlib==3.8.3",
         "pyraf==2.2.2",
         "scipy==1.15.1",
+        "python-dotenv==1.0.1",
     ],
 )
