@@ -136,7 +136,7 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
 
 
 def extract_2d_spectra(store: Any, observations: list[Any]) -> None:
-    print(f"Extracting 2D spectra...")
+    print("Extracting 2D spectra...")
     for observation in observations:
         for coordinates in store.order_coordinates:
             order = Order(observation, coordinates)

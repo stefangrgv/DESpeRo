@@ -1,4 +1,3 @@
-import os
 from typing import Any
 
 import matplotlib
@@ -7,21 +6,11 @@ import numpy as np
 from dotenv import load_dotenv
 from lines import lines
 
-from pyraf import iraf
-from src.apall import extract_2d_spectra, find_orders_coordinates
 from src.calibrate import fit_chebyshev
 from src.fit import fit_line_with_gaussian, gaussian
-from src.initial_corrections import correct_for_bias, correct_for_flat
-from src.store.store import Store
 
 LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20
-
-CORRECT_BIAS = False
-CORRECT_FLAT = False
-
-matplotlib.use("TkAgg")
-load_dotenv()
 
 
 def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) -> None:
@@ -59,11 +48,14 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
 
 
 def calibrate_order(comp_standard: Any, order_number: int) -> None:
-    comp_standard.orders[order_number].intensity = np.asarray(
-        comp_standard.orders[order_number].intensity, dtype=np.float16
-    )
-    comp_standard.orders[order_number].intensity /= np.max(comp_standard.orders[order_number].intensity)
-    comp_standard.orders[order_number].intensity -= np.min(comp_standard.orders[order_number].intensity)
+    order = comp_standard.orders[order_number]
+
+    # normalize intensity and set its baseline to 0
+    order.intensity = np.asarray(order.intensity, dtype=np.float64)
+    order.intensity /= np.max(order.intensity)
+    order.intensity -= np.min(order.intensity)
+    order.intensity = np.asarray(order.intensity, dtype=np.float16)
+
     order_lines = lines.get(order_number, None)
     gauss_params = []
     if order_lines is not None:
@@ -71,8 +63,8 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
         for line in order_lines:
             try:
                 gauss = fit_line_with_gaussian(
-                    comp_standard.orders[order_number].order_coordinates.columns,
-                    comp_standard.orders[order_number].intensity,
+                    order.order_coordinates.columns,
+                    order.intensity,
                     line[0],
                 )
                 gauss_params.append(gauss)
@@ -81,7 +73,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
                 print(e)
                 gauss_params.append([])
                 exact_line_positions.append((line[0], line[1]))
-        comp_standard.orders[order_number].order_coordinates.lines = exact_line_positions
+        order.order_coordinates.lines = exact_line_positions
     if LIVE_PLOT:
         plot_order(comp_standard, order_number, gauss_params)
 
@@ -95,5 +87,7 @@ def create_comp_standard() -> None:
 
 
 if __name__ == "__main__":
+    matplotlib.use("TkAgg")
+    load_dotenv()
     comp_standard = create_comp_standard()
     np.save("../comp_standard.npy", comp_standard, allow_pickle=True)

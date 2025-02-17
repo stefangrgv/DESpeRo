@@ -1,5 +1,3 @@
-import os
-import sys
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -7,7 +5,6 @@ import numpy as np
 from scipy.signal import correlate
 
 from src.fit import fit_line_with_gaussian, gaussian
-from src.parameters import CUTOFF
 
 PLOT_SPECTRA = False  # for plot for paper
 
@@ -27,17 +24,17 @@ def _get_comp_shift_from_standard(standard_intensity: float, comp_intensity: flo
 
 def calibrate_comp_spectra(store: Any) -> None:
     # TODO: match comp with standard
-    print(f"Calibrating comp spectra...")
+    print("Calibrating comp spectra...")
     try:
         comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
     except FileNotFoundError as err:
         print("Error: comp standard not found!")
         print(err)
-        sys.exit(1)
+        exit()
     for comp in store.comp:
-        for order_number in range(len(comp.orders)):
-            comp.orders[order_number].intensity = np.asarray(comp.orders[order_number].intensity, dtype=np.float16)
-            comp.orders[order_number].intensity /= np.max(comp.orders[order_number].intensity)
+        for order in comp.orders:
+            order.intensity = np.asarray(order.intensity, dtype=np.float16)
+            order.intensity /= np.max(order.intensity)
         corresponding_apertures = []
         for standard_order in comp_standard.orders:
             deltas = np.abs(
