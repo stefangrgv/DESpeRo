@@ -17,7 +17,7 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
     order = comp_standard.orders[order_number]
     _, ax = plt.subplots(nrows=2, sharex=True)
     ax[0].set_title(f"Order #{order_number}")
-    ax[0].plot(order.order_coordinates.columns, order.intensity, color="black", lw=2)
+    ax[0].plot(order.coordinates.columns, order.intensity, color="black", lw=2)
     ax[0].set_ylabel("Normalized intensity")
     ax[1].set_ylabel(r"Wavelength (${\AA}$)")
     ax[1].set_xlabel("Column number")
@@ -26,8 +26,8 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
         # plt.rcParams.update({"font.size": 24})
         inc_y_shift = np.max(order.intensity) / (len(order_lines) + 1)
         cheby_fit = fit_chebyshev(order_lines, degree=3)
-        order.wavelength = cheby_fit(order.order_coordinates.columns)
-        ax[1].plot(order.order_coordinates.columns, order.wavelength, color="green", lw=2)
+        order.wavelength = cheby_fit(order.coordinates.columns)
+        ax[1].plot(order.coordinates.columns, order.wavelength, color="green", lw=2)
         coeffs = [f"{coef:.2f}" for coef in cheby_fit.coef]
         ax[1].text(0.2, 0.8, ", ".join(coeffs), transform=ax[1].transAxes, ha="center", va="center")
         for i, line in enumerate(order_lines):
@@ -63,7 +63,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
         for line in order_lines:
             try:
                 gauss = fit_line_with_gaussian(
-                    order.order_coordinates.columns,
+                    order.coordinates.columns,
                     order.intensity,
                     line[0],
                 )
@@ -73,7 +73,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
                 print(e)
                 gauss_params.append([])
                 exact_line_positions.append((line[0], line[1]))
-        order.order_coordinates.lines = exact_line_positions
+        order.coordinates.lines = exact_line_positions
     if LIVE_PLOT:
         plot_order(comp_standard, order_number, gauss_params)
 

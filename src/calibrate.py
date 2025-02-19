@@ -37,9 +37,7 @@ def calibrate_comp_spectra(store: Any) -> None:
             order.intensity /= np.max(order.intensity)
         corresponding_apertures = []
         for standard_order in comp_standard.orders:
-            deltas = np.abs(
-                [standard_order.order_coordinates.rows - order.order_coordinates.rows for order in comp.orders]
-            )
+            deltas = np.abs([standard_order.coordinates.rows - order.coordinates.rows for order in comp.orders])
             min_delta_index = np.argmin([np.sum(delta) for delta in deltas])
             corresponding_apertures.append(min_delta_index)
         order_shift = np.median(
@@ -51,24 +49,24 @@ def calibrate_comp_spectra(store: Any) -> None:
                 # Order does not match any order in the comparison standard - will be ignored
                 continue
             i_comp = i_standard - order_shift
+            standard_order = comp_standard.orders[i_standard]
+            comp_order = comp.orders[i_comp]
+
             has_lines = (
-                hasattr(comp_standard.orders[i_standard].order_coordinates, "lines")
-                and len(comp_standard.orders[i_standard].order_coordinates.lines) > 0
+                hasattr(comp_standard.orders[i_standard].coordinates, "lines")
+                and len(comp_standard.orders[i_standard].coordinates.lines) > 0
             )
             # TODO: when finished, has_lines will always be true
             if has_lines:
-                comp_intensity = np.asarray(comp.orders[i_comp].intensity, dtype=np.float16)
+                comp_intensity = np.asarray(comp_order.intensity, dtype=np.float16)
                 comp_intensity /= np.max(comp_intensity)
                 comp_intensity -= np.min(comp_intensity)
-                rough_shift_estimate = _get_comp_shift_from_standard(
-                    comp_standard.orders[i_standard].intensity, comp_intensity
-                )
                 comp_lines = []
-                for line in comp_standard.orders[i_standard].order_coordinates.lines:
-                    # plt.axvline(line[0], color="green", ls="--")
+                for line in standard_order.coordinates.lines:
+                    plt.axvline(line[0], color="green", ls="--")
                     try:
                         line_fit_coeffs = fit_line_with_gaussian(
-                            comp.orders[i_comp].order_coordinates.columns, comp_intensity, int(line[0])
+                            comp_order.coordinates.columns, comp_intensity, int(line[0])
                         )
                         fit_x = np.linspace(0, 2048, 2048 * 16)
                         line_fit = gaussian(
@@ -81,12 +79,13 @@ def calibrate_comp_spectra(store: Any) -> None:
                         comp_lines.append((float(line_fit_coeffs["x0"]), line[1]))
                     except RuntimeError:  # gaussian fit did not converge: line not found
                         continue
-                #     plt.plot(fit_x, line_fit, color="purple", label="gaussian fit")
-                #     plt.axvline(line_fit_coeffs["x0"], color="purple", ls="--")
-                # plt.legend()
-                # plt.show()
+                    plt.plot(fit_x, line_fit, color="purple", label="gaussian fit")
+                    plt.axvline(line_fit_coeffs["x0"], color="purple", ls="--")
+                plt.plot(comp_order.coordinates.columns, comp_order.intensity, color="black", label="comp")
+                plt.legend()
+                plt.show()
                 cheby_fit = fit_chebyshev(comp_lines, degree=3)
-                comp.orders[i_comp].wavelength = cheby_fit(np.asarray(comp.orders[i_comp].columns))
+                comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
 
 
 def get_comp_for_stellar(store: Any) -> None:

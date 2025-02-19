@@ -138,15 +138,14 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
 def extract_2d_spectra(store: Any, observations: list[Any]) -> None:
     print("Extracting 2D spectra...")
     for observation in observations:
+        if observation.wavelength_calibrated:
+            return
+        print(f"\t{observation.fits_file.split('/')[-1]}")
         for coordinates in store.order_coordinates:
             order = Order(observation, coordinates)
-            order.columns = []
-            order.intensity = []
             for i in range(len(coordinates.rows)):
                 row = int(coordinates.rows[i])
                 column = int(coordinates.columns[i])
-                if column not in order.columns:
-                    order.columns.append(column)
 
                 intensity_aggregate = [observation.raw_data[row][column]]
                 for j in range(1, APERTURE_HEIGHT):
@@ -156,3 +155,4 @@ def extract_2d_spectra(store: Any, observations: list[Any]) -> None:
                         intensity_aggregate.append(observation.raw_data[row - j][column])
                 order.intensity.append(np.average(intensity_aggregate))
             observation.orders.append(order)
+        observation.wavelength_calibrated = True

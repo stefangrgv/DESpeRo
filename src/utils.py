@@ -59,7 +59,7 @@ def get_readtimes(journal: list[dict]) -> list[int | float]:
 class ObservationEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Order):
-            return {"intensity": [int(i) for i in obj.intensity], "order_coordinates": obj.order_coordinates}
+            return {"intensity": [int(i) for i in obj.intensity], "coordinates": obj.coordinates}
         elif isinstance(obj, OrderCoordinates):
             return {
                 "number": obj.number,

@@ -54,12 +54,9 @@ class DRSRun:
         else:
             find_orders_coordinates(store, use_master_flat=False)
 
-        extract_2d_spectra(
-            store,
-            [*store.comp, *store.stellar],
-        )
-        calibrate_comp_spectra(store)
         get_comp_for_stellar(store)
+        extract_2d_spectra(store, [*store.stellar, *[st.comp for st in store.stellar]])
+        calibrate_comp_spectra(store)
         calibrate_stellar(store)
 
         if self.vhelio:

@@ -24,6 +24,7 @@ class Observation:
         self.rdnoise = rdnoise
         self.vhelio = None
         self.orders = []
+        self.wavelength_calibrated = False
 
         if load:
             _, raw_data = load_fits(self.fits_file)
