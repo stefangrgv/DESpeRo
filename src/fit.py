@@ -1,14 +1,19 @@
+from typing import List
+
 import numpy as np
-from scipy.optimize import curve_fit
+from numpy.polynomial.chebyshev import Chebyshev, chebfit, chebval
+from scipy.optimize import curve_fit, least_squares
 
 from src.parameters import FIT_WINDOW_HW
 
 
-def gaussian(x: list | np.ndarray, a: float, x0: float, sigma: float, offset: float) -> np.ndarray:
+def gaussian(x: List[float | int] | np.ndarray, a: float, x0: float, sigma: float, offset: float) -> np.ndarray:
     return a * np.exp(-((x - x0) ** 2) / (2 * sigma**2)) + offset
 
 
-def fit_line_with_gaussian(col: list | np.ndarray, intensity: list | np.ndarray, approx_peak: float) -> dict:
+def fit_line_with_gaussian(
+    col: List[int] | np.ndarray, intensity: List[float | int] | np.ndarray, approx_peak: float
+) -> dict:
     col = np.asarray(col)
     intensity = np.asarray(intensity)
     approx_peak_intensity_index = np.argwhere(col == approx_peak)[0][
@@ -45,7 +50,7 @@ def fit_line_with_gaussian(col: list | np.ndarray, intensity: list | np.ndarray,
         raise RuntimeError("Gaussian fit to line did not converge")
 
 
-def is_fit_ok(fit_coeffs):
+def is_fit_ok(fit_coeffs: List[float]) -> bool:
     errors = np.sqrt(np.diag(fit_coeffs["pcov"]))
     relative_errors = np.asarray(
         [
@@ -55,3 +60,19 @@ def is_fit_ok(fit_coeffs):
         ]
     )
     return np.all(relative_errors <= 0.5)
+
+
+def get_finetuned_chebyshev(
+    x: List[float] | np.ndarray, y: List[float] | np.ndarray, initial_coeffs: List[float]
+) -> np.ndarray:
+    def residuals(coeffs, x_new, y_new, lambda_reg=0.1):
+        # Compute the difference between the new dataset and the adjusted model
+        model_vals = chebval(x_new, coeffs)
+        data_residuals = model_vals - y_new
+        # Regularization term: Penalize large deviations from the original fit
+        reg_residuals = lambda_reg * (coeffs - initial_coeffs)
+
+        return np.concatenate([data_residuals, reg_residuals])
+
+    result = least_squares(residuals, initial_coeffs, args=(x, y))
+    return Chebyshev(result.x)

@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from dotenv import load_dotenv
 from lines import lines
+from numpy.polynomial.chebyshev import chebfit, chebval
 
-from src.calibrate import fit_chebyshev
 from src.fit import fit_line_with_gaussian, gaussian
 
-LIVE_PLOT = True
+LIVE_PLOT = False
 GAUSS_FIT_WINDOW = 20
 
 
@@ -25,10 +25,9 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
     if order_lines is not None and len(order_lines):
         # plt.rcParams.update({"font.size": 24})
         inc_y_shift = np.max(order.intensity) / (len(order_lines) + 1)
-        cheby_fit = fit_chebyshev(order_lines, degree=3)
-        order.wavelength = cheby_fit(order.coordinates.columns)
-        ax[1].plot(order.coordinates.columns, order.wavelength, color="green", lw=2)
-        coeffs = [f"{coef:.2f}" for coef in cheby_fit.coef]
+        wavelength = chebval(order.coordinates.columns, order.coordinates.coeff)
+        ax[1].plot(order.coordinates.columns, wavelength, color="green", lw=2)
+        coeffs = [f"{coef:.2f}" for coef in order.coordinates.coeff]
         ax[1].text(0.2, 0.8, ", ".join(coeffs), transform=ax[1].transAxes, ha="center", va="center")
         for i, line in enumerate(order_lines):
             params = gauss_params[i]
@@ -59,7 +58,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
     order_lines = lines.get(order_number, None)
     gauss_params = []
     if order_lines is not None:
-        exact_line_positions = []
+        line_columns, line_wavelengths = [], []
         for line in order_lines:
             try:
                 gauss = fit_line_with_gaussian(
@@ -68,12 +67,15 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
                     line[0],
                 )
                 gauss_params.append(gauss)
-                exact_line_positions.append((gauss["x0"], line[1]))
+                line_columns.append(gauss["x0"])
+                line_wavelengths.append(line[1])
             except RuntimeError as e:  # gaussian fit did not converge, use line without fitting
                 print(e)
                 gauss_params.append([])
-                exact_line_positions.append((line[0], line[1]))
-        order.coordinates.lines = exact_line_positions
+                line_columns.append(line[0])
+                line_wavelengths.append(line[1])
+        order.coordinates.lines = [(line_columns[i], line_wavelengths[i]) for i in range(len(line_columns))]
+        order.coordinates.coeff = chebfit(line_columns, line_wavelengths, deg=3)
     if LIVE_PLOT:
         plot_order(comp_standard, order_number, gauss_params)
 

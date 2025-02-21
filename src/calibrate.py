@@ -3,21 +3,13 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.fit import fit_line_with_gaussian, is_fit_ok
+from src.fit import fit_line_with_gaussian, get_finetuned_chebyshev, is_fit_ok
 
 PLOT_SPECTRA = False  # for plot for paper
 
 if PLOT_SPECTRA:
     from src.fit import gaussian
     from src.parameters import FIT_WINDOW_HW
-
-
-def fit_chebyshev(lines: list[int, float], degree: int = 3) -> np.ndarray:
-    px, wl = ([], [])
-    for p in lines:
-        px.append(p[0])
-        wl.append(p[1])
-    return np.polynomial.chebyshev.Chebyshev.fit(px, wl, deg=degree)
 
 
 def calibrate_comp_spectra(store: Any) -> None:
@@ -58,7 +50,7 @@ def calibrate_comp_spectra(store: Any) -> None:
                 comp_intensity = np.asarray(comp_order.intensity, dtype=np.float16)
                 comp_intensity /= np.max(comp_intensity)
                 comp_intensity -= np.min(comp_intensity)
-                comp_lines = []
+                lines_column, lines_wavelength = [], []
                 for line in standard_order.coordinates.lines:
                     plt.axvline(line[0], color="green", ls="--")
                     try:
@@ -67,7 +59,8 @@ def calibrate_comp_spectra(store: Any) -> None:
                         )
                         fit_ok = is_fit_ok(line_fit_coeffs)
                         if fit_ok:
-                            comp_lines.append((float(line_fit_coeffs["x0"]), line[1]))
+                            lines_column.append(float(line_fit_coeffs["x0"]))
+                            lines_wavelength.append(line[1])
 
                         # TODO: remove
                         if PLOT_SPECTRA:
@@ -98,7 +91,10 @@ def calibrate_comp_spectra(store: Any) -> None:
                     )
                     plt.legend()
                     plt.show()
-                cheby_fit = fit_chebyshev(comp_lines, degree=3)
+                cheby_fit = get_finetuned_chebyshev(
+                    lines_column, lines_wavelength, standard_order.coordinates.coeff
+                )
+                comp_order.coordinates.coeff = cheby_fit.coef
                 comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
 
 

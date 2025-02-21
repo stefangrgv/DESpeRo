@@ -96,6 +96,7 @@ class UI:
 
     def _go(self) -> None:
         self.root.destroy()
+        self.root.quit()
         drs_run = DRSRun(
             observation_dir=self.observations_dir.get(),
             cosmic=self.cosmic.get(),
