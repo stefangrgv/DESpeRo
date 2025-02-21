@@ -2,11 +2,14 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import correlate
 
-from src.fit import fit_line_with_gaussian, gaussian
+from src.fit import fit_line_with_gaussian, is_fit_ok
 
 PLOT_SPECTRA = False  # for plot for paper
+
+if PLOT_SPECTRA:
+    from src.fit import gaussian
+    from src.parameters import FIT_WINDOW_HW
 
 
 def fit_chebyshev(lines: list[int, float], degree: int = 3) -> np.ndarray:
@@ -17,13 +20,7 @@ def fit_chebyshev(lines: list[int, float], degree: int = 3) -> np.ndarray:
     return np.polynomial.chebyshev.Chebyshev.fit(px, wl, deg=degree)
 
 
-def _get_comp_shift_from_standard(standard_intensity: float, comp_intensity: float) -> int:
-    correlation = correlate(comp_intensity, standard_intensity, mode="full")
-    return np.argmax(correlation) - len(comp_intensity) + 1
-
-
 def calibrate_comp_spectra(store: Any) -> None:
-    # TODO: match comp with standard
     print("Calibrating comp spectra...")
     try:
         comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
@@ -68,22 +65,39 @@ def calibrate_comp_spectra(store: Any) -> None:
                         line_fit_coeffs = fit_line_with_gaussian(
                             comp_order.coordinates.columns, comp_intensity, int(line[0])
                         )
-                        fit_x = np.linspace(0, 2048, 2048 * 16)
-                        line_fit = gaussian(
-                            fit_x,
-                            line_fit_coeffs["a"],
-                            line_fit_coeffs["x0"],
-                            line_fit_coeffs["sigma"],
-                            line_fit_coeffs["offset"],
-                        )
-                        comp_lines.append((float(line_fit_coeffs["x0"]), line[1]))
+                        fit_ok = is_fit_ok(line_fit_coeffs)
+                        if fit_ok:
+                            comp_lines.append((float(line_fit_coeffs["x0"]), line[1]))
+
+                        # TODO: remove
+                        if PLOT_SPECTRA:
+                            fit_x = np.linspace(
+                                line[0] - 2 * FIT_WINDOW_HW, line[0] + 2 * FIT_WINDOW_HW, 20 * FIT_WINDOW_HW
+                            )
+                            line_fit = gaussian(
+                                fit_x,
+                                line_fit_coeffs["a"],
+                                line_fit_coeffs["x0"],
+                                line_fit_coeffs["sigma"],
+                                line_fit_coeffs["offset"],
+                            )
+                            if fit_ok:
+                                color = "purple"
+                            else:
+                                color = "orange"
+                            plt.plot(fit_x, line_fit, color=color, label="gaussian fit")
+                            plt.axvline(line_fit_coeffs["x0"], color=color, ls="--")
+
                     except RuntimeError:  # gaussian fit did not converge: line not found
                         continue
-                    plt.plot(fit_x, line_fit, color="purple", label="gaussian fit")
-                    plt.axvline(line_fit_coeffs["x0"], color="purple", ls="--")
-                plt.plot(comp_order.coordinates.columns, comp_order.intensity, color="black", label="comp")
-                plt.legend()
-                plt.show()
+                # TODO: remove
+                if PLOT_SPECTRA:
+                    plt.plot(comp_order.coordinates.columns, comp_order.intensity, color="black", label="comp")
+                    plt.plot(
+                        standard_order.coordinates.columns, standard_order.intensity, color="red", label="standard"
+                    )
+                    plt.legend()
+                    plt.show()
                 cheby_fit = fit_chebyshev(comp_lines, degree=3)
                 comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
 
