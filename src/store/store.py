@@ -55,6 +55,7 @@ class Store:
 
     def create_master_biases(self) -> None:
         for readtime in list(set([bias.readtime for bias in self.bias])):
+            print(f"Creating master bias for readtime = {readtime}...")
             master_bias = MasterBias(self, readtime)
             master_bias.create()
             self.master_biases.append(master_bias)
@@ -66,10 +67,12 @@ class Store:
 
     def create_master_flats(self) -> None:
         for readtime in list(set([flat.readtime for flat in self.flat])):
+            print(f"Creating master flat for readtime = {readtime}...")
             master_flat = MasterFlat(self, readtime)
             master_flat.create()
 
             corresponding_master_bias = self._get_corresponding_master_bias(readtime)
             if corresponding_master_bias is not None:
                 master_flat.raw_data -= corresponding_master_bias.raw_data
+            master_flat.normalize()
             self.master_flats.append(master_flat)

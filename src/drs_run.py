@@ -30,11 +30,9 @@ class DRSRun:
         store = Store(self.observation_dir)
         store.load_journal_from_file()
 
-        if self.bias or self.flat or self.vhelio:
+        if self.vhelio:
             iraf.noao()
             iraf.rv()
-            iraf.imred()
-            iraf.ccd()
 
         if self.cosmic:
             clean_cosmics(store)
@@ -55,7 +53,7 @@ class DRSRun:
             find_orders_coordinates(store, use_master_flat=False)
 
         get_comp_for_stellar(store)
-        extract_2d_spectra(store, [*store.stellar, *[st.comp for st in store.stellar]])
+        extract_2d_spectra(store)
         calibrate_comp_spectra(store)
         calibrate_stellar(store)
 

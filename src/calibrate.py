@@ -12,6 +12,11 @@ if PLOT_SPECTRA:
     from src.parameters import FIT_WINDOW_HW
 
 
+def _get_useful_comp_indexes(store: Any):
+    useful_indexes = [stellar.comp_index for stellar in store.stellar]
+    return list(set(useful_indexes))
+
+
 def calibrate_comp_spectra(store: Any) -> None:
     print("Calibrating comp spectra...")
     try:
@@ -20,13 +25,17 @@ def calibrate_comp_spectra(store: Any) -> None:
         print("Error: comp standard not found!")
         print(err)
         exit()
-    for comp in store.comp:
+    useful_comp_indexes = _get_useful_comp_indexes(store)
+    for comp_index, comp in enumerate(store.comp):
+        if comp_index not in useful_comp_indexes:
+            continue
+
         for order in comp.orders:
             order.intensity = np.asarray(order.intensity, dtype=np.float16)
             order.intensity /= np.max(order.intensity)
         corresponding_apertures = []
         for standard_order in comp_standard.orders:
-            deltas = np.abs([standard_order.coordinates.rows - order.coordinates.rows for order in comp.orders])
+            deltas = np.abs([standard_order.coordinates.rows - order.rows for order in store.order_coordinates])
             min_delta_index = np.argmin([np.sum(delta) for delta in deltas])
             corresponding_apertures.append(min_delta_index)
         order_shift = np.median(
@@ -91,9 +100,7 @@ def calibrate_comp_spectra(store: Any) -> None:
                     )
                     plt.legend()
                     plt.show()
-                cheby_fit = get_finetuned_chebyshev(
-                    lines_column, lines_wavelength, standard_order.coordinates.coeff
-                )
+                cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
                 comp_order.coordinates.coeff = cheby_fit.coef
                 comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
 
@@ -101,15 +108,16 @@ def calibrate_comp_spectra(store: Any) -> None:
 def get_comp_for_stellar(store: Any) -> None:
     for stellar in store.stellar:
         min_timedelta = np.inf
-        for comp in store.comp:
+        for comp_index, comp in enumerate(store.comp):
             timedelta = abs(stellar.date - comp.date).total_seconds()
             if timedelta < min_timedelta:
                 min_timedelta = timedelta
-                stellar.comp = comp
+                stellar.comp_index = comp_index
 
 
 def calibrate_stellar(store: Any) -> None:
     print("Calibrating for wavelength...")
     for stellar in store.stellar:
         for order_number in range(len(stellar.orders)):
-            stellar.orders[order_number].wavelength = stellar.comp.orders[order_number].wavelength
+            comp = store.comp[stellar.comp_index]
+            stellar.orders[order_number].wavelength = comp.orders[order_number].wavelength

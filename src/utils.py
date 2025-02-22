@@ -1,7 +1,5 @@
 import json
 import os
-import random
-import string
 from enum import Enum
 from typing import Any
 
@@ -34,10 +32,6 @@ def get_technical_apertures_path(fits_path: str) -> str:
 
 def load_npy_spectrum(fpath: str) -> np.ndarray:
     return np.load(fpath, allow_pickle=True).item()
-
-
-def generate_random_fits_filename(length: int = 100) -> str:
-    return "".join(random.choices(string.ascii_letters, k=length)) + ".fits"
 
 
 def add_vhelio_to_fits(store: Any) -> None:

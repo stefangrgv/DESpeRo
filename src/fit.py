@@ -1,7 +1,7 @@
 from typing import List
 
 import numpy as np
-from numpy.polynomial.chebyshev import Chebyshev, chebfit, chebval
+from numpy.polynomial.chebyshev import Chebyshev, chebval
 from scipy.optimize import curve_fit, least_squares
 
 from src.parameters import FIT_WINDOW_HW

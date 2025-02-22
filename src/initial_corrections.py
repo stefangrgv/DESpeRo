@@ -21,10 +21,8 @@ def correct_for_flat(store: Any) -> None:
     print("Correcting for flat...")
     for master_flat in store.master_flats:
         observations = [observation for observation in store.stellar if observation.readtime == master_flat.readtime]
-        master_flat_float64 = master_flat.raw_data.astype(np.float64)
-        normalized_master_flat = master_flat_float64 / np.max(master_flat_float64)
         for observation in observations:
-            corrected_data = observation.raw_data.astype(np.float64) / normalized_master_flat
+            corrected_data = observation.raw_data.astype(np.float64) / master_flat.normalized_data
             observation.raw_data = np.clip(corrected_data, 0, 2**16).astype(np.uint16)
 
 
