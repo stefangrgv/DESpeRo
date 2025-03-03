@@ -12,7 +12,7 @@ def correct_for_bias(store: Any) -> None:
             observation for observation in target_observations if observation.readtime == master_bias.readtime
         ]
         for observation in observations:
-            target_data = observation.raw_data.astype(np.int32)
+            target_data = observation.raw_data.astype(np.int64)
             target_data -= master_bias.raw_data
             observation.raw_data = np.clip(target_data, 0, 2**16).astype(np.uint16)
 

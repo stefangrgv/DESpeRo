@@ -9,7 +9,7 @@ from numpy.polynomial.chebyshev import chebfit, chebval
 
 from src.fit import fit_line_with_gaussian, gaussian
 
-LIVE_PLOT = False
+LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20
 
 
@@ -27,7 +27,7 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
         inc_y_shift = np.max(order.intensity) / (len(order_lines) + 1)
         wavelength = chebval(order.coordinates.columns, order.coordinates.coeff)
         ax[1].plot(order.coordinates.columns, wavelength, color="green", lw=2)
-        coeffs = [f"{coef:.2f}" for coef in order.coordinates.coeff]
+        coeffs = [f"{coef:.3f}" for coef in order.coordinates.coeff]
         ax[1].text(0.2, 0.8, ", ".join(coeffs), transform=ax[1].transAxes, ha="center", va="center")
         for i, line in enumerate(order_lines):
             params = gauss_params[i]

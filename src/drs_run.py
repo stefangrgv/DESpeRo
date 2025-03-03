@@ -47,10 +47,10 @@ class DRSRun:
 
         if self.flat:
             store.create_master_flats()
-            find_orders_coordinates(store, use_master_flat=True)
+            find_orders_coordinates(store, use_master_flat=True, draw=True)
             correct_for_flat(store)
         else:
-            find_orders_coordinates(store, use_master_flat=False)
+            find_orders_coordinates(store, use_master_flat=False, draw=True)
 
         get_comp_for_stellar(store)
         extract_2d_spectra(store)

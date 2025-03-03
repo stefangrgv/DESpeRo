@@ -12,4 +12,4 @@ def save_as_ascii(observation: Any) -> None:
             for i in range(len(order.wavelength)):
                 f.write(f"{order.wavelength[i]:.4f}\t{int(order.intensity[i])}\n")
 
-    print(f"Saved 2d/{output_filename}")
+    print(f"Saved {output_dir}/{output_filename}")
