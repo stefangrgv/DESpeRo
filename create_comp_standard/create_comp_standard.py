@@ -3,7 +3,6 @@ from typing import Any
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from dotenv import load_dotenv
 from lines import lines
 from numpy.polynomial.chebyshev import chebfit, chebval
 
@@ -90,6 +89,5 @@ def create_comp_standard() -> None:
 
 if __name__ == "__main__":
     matplotlib.use("TkAgg")
-    load_dotenv()
     comp_standard = create_comp_standard()
     np.save("../comp_standard.npy", comp_standard, allow_pickle=True)
