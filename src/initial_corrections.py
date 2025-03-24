@@ -26,18 +26,6 @@ def correct_for_flat(store: Any) -> None:
             observation.raw_data = np.clip(corrected_data, 0, 2**16).astype(np.uint16)
 
 
-def _remove_doppler_shift(wl: int | float, rv: int | float) -> float:
-    return wl + wl * (rv / 299792.458)
-
-
-def correct_for_vhelio(store: Any) -> None:
-    print("Correcting for heliocentric velocity...")
-    for stellar in store.stellar:
-        if stellar.vhelio is not None:
-            for i in range(len(stellar.orders)):
-                stellar.orders[i].wavelength = _remove_doppler_shift(stellar.orders[i].wavelength, stellar.vhelio)
-
-
 def clean_cosmics(store: Any) -> None:
     for spectrum in [*store.comp, *store.stellar]:
         print(f"Cleaning cosmics from {spectrum.fits_file}...")

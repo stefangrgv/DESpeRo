@@ -1,12 +1,10 @@
 import json
 import os
 from enum import Enum
-from typing import Any
 
 import numpy as np
 from astropy.io import fits
 
-from pyraf import iraf
 from src.store.order import Order
 from src.store.order_coordinates import OrderCoordinates
 
@@ -32,11 +30,6 @@ def get_technical_apertures_path(fits_path: str) -> str:
 
 def load_npy_spectrum(fpath: str) -> np.ndarray:
     return np.load(fpath, allow_pickle=True).item()
-
-
-def add_vhelio_to_fits(store: Any) -> None:
-    for stellar in store.stellar:
-        iraf.rvcorrect(images=stellar.fits_file, imup="yes", observatory="rozhen")
 
 
 def get_readtime_and_readnoise(

@@ -1,21 +1,15 @@
-from pyraf import iraf
 from src.apall import extract_2d_spectra, find_orders_coordinates
 from src.calibrate import (
     calibrate_comp_spectra,
     calibrate_stellar,
     get_comp_for_stellar,
 )
-from src.initial_corrections import (
-    clean_cosmics,
-    correct_for_bias,
-    correct_for_flat,
-    correct_for_vhelio,
-)
+from src.initial_corrections import clean_cosmics, correct_for_bias, correct_for_flat
 from src.normalize import normalize, stitch_oned
 from src.save.as_ascii import save_as_1d_ascii, save_as_2d_ascii
 from src.save.as_fits import save_as_fits
 from src.store.store import Store
-from src.utils import add_vhelio_to_fits
+from src.vhelio import correct_vhelio
 
 
 class DRSRun:
@@ -30,15 +24,8 @@ class DRSRun:
         store = Store(self.observation_dir)
         store.load_journal_from_file()
 
-        if self.vhelio:
-            iraf.noao()
-            iraf.rv()
-
         if self.cosmic:
             clean_cosmics(store)
-
-        if self.vhelio:
-            add_vhelio_to_fits(store)
 
         if self.bias:
             # fix bias correction
@@ -58,7 +45,7 @@ class DRSRun:
         calibrate_stellar(store)
 
         if self.vhelio:
-            correct_for_vhelio(store)
+            correct_vhelio(store)
 
         # save_fits(store)
         normalize(store)

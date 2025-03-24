@@ -1,6 +1,6 @@
 from typing import Any
 
-from src.utils import load_fits
+from src.utils import EXPOSURE_TYPES, load_fits
 
 
 class Observation:
@@ -27,5 +27,10 @@ class Observation:
         self.wavelength_calibrated = False
 
         if load:
-            _, raw_data = load_fits(self.fits_file)
+            header, raw_data = load_fits(self.fits_file)
             self.raw_data = raw_data
+
+            if exposure_type == EXPOSURE_TYPES.STELLAR:
+                self.ra = header["RA"]
+                self.dec = header["DEC"]
+                self.jd = header["JD-OBS"]
