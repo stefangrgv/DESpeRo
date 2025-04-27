@@ -85,7 +85,6 @@ def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, fou
         }
     ]
     if pixels[0]["intensity"] < INTENSITY_THRESHOLD:
-        print(f"below intensity threshold: {starting_column}, {starting_row}, {pixels[0]['intensity']}")
         return []
 
     pixels = _trace_direction(image, starting_row, starting_column, "left", [])

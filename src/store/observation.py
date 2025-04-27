@@ -25,6 +25,8 @@ class Observation:
         self.vhelio = None
         self.orders = []
         self.wavelength_calibrated = False
+        self.oned_wavelength = []
+        self.oned_intensity = []
 
         if load:
             header, raw_data = load_fits(self.fits_file)

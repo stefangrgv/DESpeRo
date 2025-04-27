@@ -1,46 +1,17 @@
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-
-
-def _get_part_indexes(wavelength: list | np.ndarray) -> list[list]:
-    n = len(wavelength)
-    parts_to_split_into = 6
-    large_part_fraction = 1 / (parts_to_split_into - 1)
-    parts_index_ranges = []
-    for i in range(parts_to_split_into):
-        if i == 0:
-            parts_index_ranges.append([0, int((large_part_fraction / 2) * n)])
-        elif i == parts_to_split_into - 1:
-            start = parts_index_ranges[-1][1]
-            parts_index_ranges.append([start, n])
-        else:
-            start = parts_index_ranges[-1][1]
-            end = int(start + large_part_fraction * n)
-            parts_index_ranges.append([start, end])
-    part_indexes = [np.asarray([i for i in range(part[0], part[1])]) for part in parts_index_ranges]
-    return part_indexes
+from scipy.signal import find_peaks
 
 
 def _fit_continuum(
     wavelength: list[float] | np.ndarray,
     intensity: list[float],
-    absorption_threshold: int = 60,
-    emission_threshold: int = 90,
 ) -> np.ndarray:
-    intensity = np.asarray(intensity)
-    part_indexes = _get_part_indexes(wavelength)
-    continuum_indices = []
-    for indexes in part_indexes:
-        ind_start, ind_end = indexes[0], indexes[-1]
-        intensity_part = intensity[ind_start : ind_end + 1]
-        lower_threshold = np.percentile(intensity_part, absorption_threshold)
-        upper_threshold = np.percentile(intensity_part, emission_threshold)
-        continuum_mask = (intensity_part > lower_threshold) & (intensity_part < upper_threshold)
-        continuum_indices += indexes[continuum_mask].tolist()
-    continuum_wavelength = wavelength[continuum_indices]
-    continuum_intensity = intensity[continuum_indices]
-    cheby_fit = np.polynomial.chebyshev.Chebyshev.fit(continuum_wavelength, continuum_intensity, deg=5)
+    intensity_array = np.asarray(intensity)
+    peaks_ind, _ = find_peaks(intensity_array)
+    cheby_fit = np.polynomial.chebyshev.Chebyshev.fit(wavelength[peaks_ind], intensity_array[peaks_ind], deg=5)
     return cheby_fit(wavelength)
 
 
@@ -56,56 +27,89 @@ def normalize(store: Any) -> None:
                     print(f"\tCould not normalize order #{i}: {e}")
 
 
+@dataclass
+class Overlap:
+    wl_start: float
+    wl_end: float
+    n_order_1: int
+    n_order_2: int
+    observation: Any
+
+    def keep_end_of_first_order(self):
+        """
+        Returns true if the end of the first order will be kept, false otherwise
+        """
+
+        first_order = self.observation.orders[self.n_order_1]
+        second_order = self.observation.orders[self.n_order_2]
+        indexes_1 = np.where((first_order.wavelength >= self.wl_start) & (first_order.wavelength <= self.wl_end))[0]
+        intensity_1 = np.asarray(first_order.intensity)[indexes_1]
+        indexes_2 = np.where((second_order.wavelength >= self.wl_start) & (second_order.wavelength <= self.wl_end))[0]
+        intensity_2 = np.asarray(second_order.intensity)[indexes_2]
+
+        return np.sum(intensity_1) >= np.sum(intensity_2)
+
+
 def stitch_oned(store: Any) -> None:
-    for s, stellar in enumerate(store.stellar):
-        print(f"Stitching {stellar.fits_file}...")
-        (oned_wavelength, oned_intensity) = ([], [])
-        # this is a BAD algorithm even if it works, it's really slow
-        # stack the orders together: all_wl = [*wl for wl in order.wavelength for order in stellar.orders], same for intensity
-        # iterate over the spectrum and save good results in a wl array, same for intensity
-        # but first of all, fix the calibration
-        for i, order in enumerate(stellar.orders[13:45]):
-            if len(order.normalized_intensity) == 0:
-                print("\tCould not create 1D spectrum: some orders are not normalized!")
-                break
-            next_order = stellar.orders[i + 1]
-            # find the overlapping (ol) wavelength window
-            ol_start = next_order.wavelength[-1]
-            ol_end = order.wavelength[0]
-            if ol_start < ol_end:  # overlap exists
-                order_ol_indexes = [j for j in range(len(order.wavelength)) if order.wavelength[j] >= ol_start]
-                next_order_ol_indexes = [
-                    j for j in range(len(next_order.wavelength)) if next_order.wavelength[j] <= ol_end
-                ]
-                # add points outside the overlap for the current order
-                for j in range(len(order.wavelength)):
-                    if j not in order_ol_indexes and order.wavelength[j] not in oned_wavelength:
-                        oned_wavelength.append(order.wavelength[j])
-                        oned_intensity.append(order.normalized_intensity[j])
-                # add points inside the overlap for the order with the higher SNR
-                if np.sum([order.intensity[j] for j in order_ol_indexes]) >= np.sum(
-                    [next_order.intensity[j] for j in next_order_ol_indexes]
-                ):
-                    for j in range(len(order.wavelength)):
-                        if j in order_ol_indexes and order.wavelength[j] not in oned_wavelength:
-                            oned_wavelength.append(order.wavelength[j])
-                            oned_intensity.append(order.normalized_intensity[j])
+    print("Building 1D spectra...")
+    for stellar in store.stellar:
+        oned_wavelength, oned_intensity = [], []
+
+        overlaps = []
+        for order_number in reversed(range(len(stellar.orders))):
+            order = stellar.orders[order_number]
+            if order_number < len(stellar.orders) - 1:
+                next_order = stellar.orders[order_number + 1]
+            else:
+                next_order = None
+
+            if next_order is not None and order.wavelength[-1] >= next_order.wavelength[0]:
+                # has overlap
+                overlap = Overlap(
+                    wl_start=order.wavelength[0],
+                    wl_end=next_order.wavelength[-1],
+                    n_order_1=order_number,
+                    n_order_2=order_number + 1,
+                    observation=stellar,
+                )
+                keep_end = overlap.keep_end_of_first_order()
+
+                # check if the start of the current order should be kept
+                keep_start = True
+                previous_overlap = None
+                for ol in overlaps:
+                    if ol.n_order_1 == order_number + 1:
+                        if ol.keep_end_of_first_order():
+                            keep_start = False
+                            previous_overlap = ol
+                            break
+                overlaps.append(overlap)
+
+                if keep_start:
+                    indexes_start = np.arange(len(order.wavelength))
                 else:
-                    for j in range(len(next_order.wavelength)):
-                        if j in next_order_ol_indexes and next_order.wavelength[j] not in oned_wavelength:
-                            oned_wavelength.append(next_order.wavelength[j])
-                            oned_intensity.append(next_order.normalized_intensity[j])
-                # add points outside the overlap for the next order
-                for j in range(len(next_order.wavelength)):
-                    if j not in next_order_ol_indexes and next_order.wavelength[j] not in oned_wavelength:
-                        oned_wavelength.append(next_order.wavelength[j])
-                        oned_intensity.append(next_order.normalized_intensity[j])
-            else:  # no overlap
-                for j in range(len(order.wavelength)):
-                    if order.wavelength[j] not in oned_wavelength:
-                        oned_wavelength.append(order.wavelength[j])
-                        oned_intensity.append(order.normalized_intensity[j])
-        # do something with the two arrays
-        store.stellar[s].oned_wavelength = np.asarray(oned_wavelength, dtype=np.float32)
-        store.stellar[s].oned_intensity = np.asarray(oned_intensity, dtype=np.float32)
-        print(np.min(oned_wavelength), np.max(oned_wavelength))
+                    indexes_start = np.where(
+                        (order.wavelength < previous_overlap.wl_start) | (order.wavelength > previous_overlap.wl_end)
+                    )[0]
+
+                if keep_end:
+                    indexes_end = np.arange(len(order.wavelength))
+                else:
+                    indexes_end = np.where((order.wavelength < overlap.wl_start) | (order.wavelength > overlap.wl_end))[
+                        0
+                    ]
+                    if len(indexes_end) == 0:
+                        import pdb
+
+                        pdb.set_trace()
+
+                keep_indexes = np.intersect1d(indexes_start, indexes_end)
+                oned_wavelength += list(order.wavelength[keep_indexes])
+                oned_intensity += list(order.normalized_intensity[keep_indexes])
+            else:
+                # no overlap
+                oned_wavelength += list(order.wavelength)
+                oned_intensity += list(order.normalized_intensity)
+
+        stellar.oned_wavelength = np.asarray(oned_wavelength)
+        stellar.oned_intensity = np.asarray(oned_intensity)
