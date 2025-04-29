@@ -47,13 +47,12 @@ class DRSRun:
         if self.vhelio:
             correct_vhelio(store)
 
-        # save_fits(store)
         normalize(store)
         stitch_oned(store)
-        # save_ascii(store)
 
         for observation in store.stellar:
             save_as_2d_ascii(observation)
-            # save_as_fits(observation)
             save_as_1d_ascii(observation)
+            save_as_fits(observation)
+            save_as_fits(observation, normalized=True)
         exit()

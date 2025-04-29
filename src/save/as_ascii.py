@@ -6,7 +6,7 @@ from typing import Any
 def save_as_1d_ascii(observation: Any) -> None:
     output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.replace(".fits", "").replace(".FITS", ""))
-    output_dir = output_dir / "reduced" / "1d" / "ascii"
+    output_dir = output_dir / "reduced" / "1d"
     os.makedirs(output_dir, exist_ok=True)
     with open(f"{output_dir}/{output_filename_base}.txt", "w") as f:
         f.write("#WAVELENGTH\tINTENSITY\n")
