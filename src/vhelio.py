@@ -19,8 +19,11 @@ def correct_vhelio(store: Any):
     rozhen = EarthLocation.from_geodetic(longitude, latitude, altitude)
 
     for stellar in store.stellar:
-        target = SkyCoord(stellar.ra, stellar.dec, unit=(u.hourangle, u.deg))
-        jd = Time(stellar.jd, format="jd")
-        stellar.vhelio = target.radial_velocity_correction(obstime=jd, location=rozhen).to("km/s").value
-        for i in range(len(stellar.orders)):
-            stellar.orders[i].wavelength = _remove_doppler_shift(stellar.orders[i].wavelength, stellar.vhelio)
+        try:
+            target = SkyCoord(stellar.ra, stellar.dec, unit=(u.hourangle, u.deg))
+            jd = Time(stellar.jd, format="jd")
+            stellar.vhelio = target.radial_velocity_correction(obstime=jd, location=rozhen).to("km/s").value
+            for i in range(len(stellar.orders)):
+                stellar.orders[i].wavelength = _remove_doppler_shift(stellar.orders[i].wavelength, stellar.vhelio)
+        except Exception as exc:
+            print(f"Error: cannot apply heliocentric velocity correction for {stellar.fits_file}: {exc}")

@@ -28,16 +28,15 @@ class DRSRun:
             clean_cosmics(store)
 
         if self.bias:
-            # fix bias correction
             store.create_master_biases()
             correct_for_bias(store)
 
         if self.flat:
             store.create_master_flats()
-            find_orders_coordinates(store, use_master_flat=True, draw=True)
+            find_orders_coordinates(store, use_master_flat=True)
             correct_for_flat(store)
         else:
-            find_orders_coordinates(store, use_master_flat=False, draw=True)
+            find_orders_coordinates(store, use_master_flat=False)
 
         get_comp_for_stellar(store)
         extract_2d_spectra(store)
