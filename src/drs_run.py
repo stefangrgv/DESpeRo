@@ -6,19 +6,36 @@ from src.calibrate import (
 )
 from src.initial_corrections import clean_cosmics, correct_for_bias, correct_for_flat
 from src.normalize import normalize, stitch_oned
-from src.save.as_ascii import save_as_1d_ascii, save_as_2d_ascii
+from src.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
 from src.save.as_fits import save_as_fits
 from src.store.store import Store
 from src.vhelio import correct_vhelio
 
 
-class DRSRun:
-    def __init__(self, observation_dir: str, cosmic: bool, bias: bool, flat: bool, vhelio: bool):
+class DRS_Run:
+    def __init__(
+        self,
+        observation_dir: str,
+        cosmic: bool,
+        bias: bool,
+        flat: bool,
+        vhelio: bool,
+        fits_2d: bool,
+        fits_2d_norm: bool,
+        ascii_2d: bool,
+        ascii_2d_norm: bool,
+        ascii_1d_norm: bool,
+    ):
         self.observation_dir = observation_dir
         self.cosmic = cosmic
         self.bias = bias
         self.flat = flat
         self.vhelio = vhelio
+        self.fits_2d = fits_2d
+        self.fits_2d_norm = fits_2d_norm
+        self.ascii_2d = ascii_2d
+        self.ascii_2d_norm = ascii_2d_norm
+        self.ascii_1d_norm = ascii_1d_norm
 
     def start(self):
         store = Store(self.observation_dir)
@@ -50,8 +67,14 @@ class DRSRun:
         stitch_oned(store)
 
         for observation in store.stellar:
-            save_as_2d_ascii(observation)
-            save_as_1d_ascii(observation)
-            save_as_fits(observation)
-            save_as_fits(observation, normalized=True)
+            if self.fits_2d:
+                save_as_fits(observation)
+            if self.fits_2d_norm:
+                save_as_fits(observation, normalized=True)
+            if self.ascii_2d:
+                save_as_2d_ascii(observation)
+            if self.ascii_2d_norm:
+                save_as_2d_ascii(observation, normalized=True)
+            if self.ascii_1d_norm:
+                save_as_1d_ascii_norm(observation)
         exit()
