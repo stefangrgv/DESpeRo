@@ -24,7 +24,6 @@ def _get_orders_brightest_pixels(data: np.ndarray) -> list[list[int, int]]:
     top_intensity_indexes.sort()
     # draw figure for paper
     if False:
-        print(len(top_intensity_indexes))
         fig, ax = plt.subplots(nrows=2)
         ax[0].imshow(data.T, cmap="gray", interpolation="nearest", aspect="auto", vmin=0, vmax=500)
         # plt.imshow(data, cmap="gray")
@@ -109,7 +108,6 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
         data = np.median([flat.raw_data for flat in store.flat], axis=0)
     orders_brightest_pixels = _get_orders_brightest_pixels(data)
     found = []
-    print("Tracing orders...")
     for i in range(len(orders_brightest_pixels)):
         starting_row = orders_brightest_pixels[i][0]
         starting_column = orders_brightest_pixels[i][1]
@@ -121,7 +119,8 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
     found = [{"columns": columns, "rows": np.rint(np.polyval(coeffs, columns)).astype(int)} for coeffs in order_coeffs]
 
     if draw:
-        plt.imshow(data, cmap="gray", vmin=500, vmax=20000)
+        plt.rcParams.update({"font.size": 24})
+        plt.imshow(data, cmap="gray", vmin=500, vmax=10000)
 
     for i in range(len(found)):
         coordinates = OrderCoordinates(i, found[i]["rows"], found[i]["columns"])
@@ -131,6 +130,8 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
     if draw:
         title = f"Echelle orders found: {len(found)}"
         plt.title(title)
+        plt.xlabel("Column number (X)")
+        plt.ylabel("Row number (Y)")
         plt.show()
 
 
@@ -156,7 +157,6 @@ def _extract_2d(store: Any, observation: Any) -> None:
 
 
 def extract_2d_spectra(store: Any) -> None:
-    print("Extracting 2D spectra...")
     for observation in store.stellar:
         _extract_2d(store, observation)
         _extract_2d(store, store.comp[observation.comp_index])

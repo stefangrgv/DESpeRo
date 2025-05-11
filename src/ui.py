@@ -1,4 +1,5 @@
 import os
+import threading
 import tkinter as tk
 from tkinter import BooleanVar, StringVar, messagebox
 from tkinter.filedialog import askdirectory
@@ -126,6 +127,138 @@ class UI:
         self.root.minsize(500, 300)
         self.root.mainloop()
 
+    def set_status(self, name: str, finished: bool) -> None:
+        color = "green" if finished else "black"
+        label = None
+        for l in self.steps_labels:
+            if l["name"] == name:
+                label = l["label"]
+                break
+        if label is not None:
+            label.config(fg=color)
+
+    def render_working_screen(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+        # frames
+        container = tk.Frame(self.root)
+        container.pack(fill="both", expand=True)
+
+        dir_frame = tk.Frame(container)
+        dir_frame.pack(anchor="w", fill="both", expand=True)
+
+        self.status_frame = tk.Frame(container)
+        self.status_frame.pack(anchor="w", fill="both", expand=True)
+
+        # elements
+        directory_label = tk.Label(dir_frame, textvariable=self.observations_dir_truncated)
+        directory_label.pack(expand=True)
+
+        self._init_steps_labels()
+
+    def _init_steps_labels(self):
+        self.steps_labels = []
+
+        if self.cosmic.get():
+            self.steps_labels.append(
+                {
+                    "name": "cosmics",
+                    "label": tk.Label(
+                        master=self.status_frame,
+                        fg="gray",
+                        textvariable=tk.StringVar(master=self.status_frame, value="Clean cosmics"),
+                    ),
+                }
+            )
+        if self.bias.get():
+            self.steps_labels.append(
+                {
+                    "name": "bias",
+                    "label": tk.Label(
+                        master=self.status_frame,
+                        fg="gray",
+                        textvariable=tk.StringVar(master=self.status_frame, value="Correct for bias"),
+                    ),
+                }
+            )
+        if self.flat.get():
+            self.steps_labels.append(
+                {
+                    "name": "flat",
+                    "label": tk.Label(
+                        master=self.status_frame,
+                        fg="gray",
+                        textvariable=tk.StringVar(master=self.status_frame, value="Correct for flat"),
+                    ),
+                }
+            )
+        self.steps_labels.append(
+            {
+                "name": "orders",
+                "label": tk.Label(
+                    master=self.status_frame,
+                    fg="gray",
+                    textvariable=tk.StringVar(master=self.status_frame, value="Trace echelle orders"),
+                ),
+            }
+        )
+        self.steps_labels.append(
+            {
+                "name": "spectra",
+                "label": tk.Label(
+                    master=self.status_frame,
+                    fg="gray",
+                    textvariable=tk.StringVar(master=self.status_frame, value="Extract spectra"),
+                ),
+            }
+        )
+        self.steps_labels.append(
+            {
+                "name": "wavelength",
+                "label": tk.Label(
+                    master=self.status_frame,
+                    fg="gray",
+                    textvariable=tk.StringVar(master=self.status_frame, value="Calibrate for wavelength"),
+                ),
+            }
+        )
+        if self.fits_2d_norm.get() or self.ascii_2d_norm.get() or self.ascii_1d_norm.get():
+            self.steps_labels.append(
+                {
+                    "name": "normalize",
+                    "label": tk.Label(
+                        master=self.status_frame,
+                        fg="gray",
+                        textvariable=tk.StringVar(master=self.status_frame, value="Normalize spectra"),
+                    ),
+                }
+            )
+        if self.ascii_1d_norm.get():
+            self.steps_labels.append(
+                {
+                    "name": "stitch",
+                    "label": tk.Label(
+                        master=self.status_frame,
+                        fg="gray",
+                        textvariable=tk.StringVar(master=self.status_frame, value="Stitch spectra"),
+                    ),
+                }
+            )
+        self.steps_labels.append(
+            {
+                "name": "save",
+                "label": tk.Label(
+                    master=self.status_frame,
+                    fg="gray",
+                    textvariable=tk.StringVar(master=self.status_frame, value="Save files"),
+                ),
+            }
+        )
+
+        for steps_label in self.steps_labels:
+            steps_label["label"].pack(expand=True)
+
     def _update_start_button_state(self):
         if any(var.get() for var in self.output_vars):
             self.start_button.config(state=tk.NORMAL)
@@ -154,13 +287,10 @@ class UI:
             self.ascii_2d_checkbox,
             self.ascii_2d_norm_checkbox,
             self.ascii_1d_norm_checkbox,
-            self.start_button,
         ]:
             setting.config(state=(tk.ACTIVE if state else tk.DISABLED))
 
     def _go(self) -> None:
-        self.root.destroy()
-        self.root.quit()
         drs_run = DRS_Run(
             observation_dir=self.observations_dir.get(),
             cosmic=self.cosmic.get(),
@@ -173,4 +303,5 @@ class UI:
             ascii_2d_norm=self.ascii_2d_norm.get(),
             ascii_1d_norm=self.ascii_1d_norm.get(),
         )
-        drs_run.start()
+        thread = threading.Thread(target=drs_run.start, args=(self,))
+        thread.start()

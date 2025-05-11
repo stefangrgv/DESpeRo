@@ -10,8 +10,6 @@ def _remove_doppler_shift(wl: float, rv: float) -> float:
 
 
 def correct_vhelio(store: Any):
-    print("Correcting for heliocentric velocity...")
-
     # Rozhen NAO coordinates
     latitude = 41.6925
     longitude = 24.738055

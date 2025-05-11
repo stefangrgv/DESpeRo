@@ -18,7 +18,6 @@ def _get_useful_comp_indexes(store: Any):
 
 
 def calibrate_comp_spectra(store: Any) -> None:
-    print("Calibrating comp spectra...")
     try:
         comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
     except FileNotFoundError as err:
@@ -61,7 +60,7 @@ def calibrate_comp_spectra(store: Any) -> None:
                 comp_intensity -= np.min(comp_intensity)
                 lines_column, lines_wavelength = [], []
                 for line in standard_order.coordinates.lines:
-                    plt.axvline(line[0], color="green", ls="--")
+                    # plt.axvline(line[0], color="green", ls="--")
                     try:
                         line_fit_coeffs = fit_line_with_gaussian(
                             comp_order.coordinates.columns, comp_intensity, int(line[0])
@@ -116,7 +115,6 @@ def get_comp_for_stellar(store: Any) -> None:
 
 
 def calibrate_stellar(store: Any) -> None:
-    print("Calibrating for wavelength...")
     for stellar in store.stellar:
         for order_number in range(len(stellar.orders)):
             comp = store.comp[stellar.comp_index]

@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import sys
 from enum import Enum
 
 import numpy as np
@@ -55,3 +57,14 @@ class ObservationEncoder(json.JSONEncoder):
                 "points": getattr(obj, "points", []),
             }
         return super().default(obj)
+
+
+def open_directory(path):
+    if sys.platform.startswith("darwin"):  # macOS
+        subprocess.run(["open", path], check=True)
+    elif os.name == "nt":  # Windows
+        os.startfile(path)
+    elif os.name == "posix":  # Linux / Unix
+        subprocess.run(["xdg-open", path], check=True)
+    else:
+        raise OSError("Unsupported operating system")

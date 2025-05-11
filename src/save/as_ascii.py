@@ -13,8 +13,6 @@ def save_as_1d_ascii_norm(observation: Any) -> None:
         for i in range(len(observation.oned_wavelength)):
             f.write(f"{observation.oned_wavelength[i]:.10f}\t{observation.oned_intensity[i]:.10f}\n")
 
-    print(f"\tSaved {output_dir}/{output_filename_base}")
-
 
 def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
     output_dir = Path(os.path.dirname(observation.fits_file))
@@ -37,5 +35,3 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
                 f.write("#WAVELENGTH\tINTENSITY\n")
                 for i in range(len(order.wavelength)):
                     f.write(f"{order.wavelength[i]:.10f}\t{order.intensity[i]:.10f}\n")
-
-    print(f"\tSaved {output_dir}")

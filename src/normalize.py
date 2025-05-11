@@ -16,7 +16,6 @@ def _fit_continuum(
 
 
 def normalize(store: Any) -> None:
-    print("Normalizing intensity...")
     for stellar in store.stellar:
         for i, order in enumerate(stellar.orders):
             if len(order.wavelength):
@@ -51,7 +50,6 @@ class Overlap:
 
 
 def stitch_oned(store: Any) -> None:
-    print("Building 1D spectra...")
     for stellar in store.stellar:
         try:
             oned_wavelength, oned_intensity = [], []

@@ -53,4 +53,3 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
             hdu.writeto(f"{output_dir}/{output_filename_base}_order_{i + 1}.fits", overwrite=True)
         except Exception as exc:
             print(f"Error: cannot save .fits spectrum for order #{i + 1} of {observation.fits_file}: {exc}")
-        # print(f"\tSaved {output_dir}/{output_filename_base}")

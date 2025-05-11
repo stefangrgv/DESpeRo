@@ -5,7 +5,6 @@ import numpy as np
 
 
 def correct_for_bias(store: Any) -> None:
-    print("Correcting for bias...")
     target_observations = [*store.flat, *store.comp, *store.stellar]
     for master_bias in store.master_biases:
         observations = [
@@ -18,7 +17,6 @@ def correct_for_bias(store: Any) -> None:
 
 
 def correct_for_flat(store: Any) -> None:
-    print("Correcting for flat...")
     for master_flat in store.master_flats:
         observations = [observation for observation in store.stellar if observation.readtime == master_flat.readtime]
         for observation in observations:
@@ -28,7 +26,6 @@ def correct_for_flat(store: Any) -> None:
 
 def clean_cosmics(store: Any) -> None:
     for spectrum in [*store.comp, *store.stellar]:
-        print(f"Cleaning cosmics from {spectrum.fits_file}...")
         _, clean_data = astroscrappy.detect_cosmics(
             spectrum.raw_data,
             sigclip=3.5,  # Detection threshold in sigma
