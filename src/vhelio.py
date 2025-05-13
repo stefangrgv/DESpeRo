@@ -9,19 +9,15 @@ def _remove_doppler_shift(wl: float, rv: float) -> float:
     return wl + wl * (rv / 299792.458)
 
 
-def correct_vhelio(store: Any):  # TODO: replace store with exposure
+def correct_vhelio(observation: Any):
     # Rozhen NAO coordinates
     latitude = 41.6925
     longitude = 24.738055
     altitude = 1759
     rozhen = EarthLocation.from_geodetic(longitude, latitude, altitude)
 
-    for stellar in store.stellar:
-        try:
-            target = SkyCoord(stellar.ra, stellar.dec, unit=(u.hourangle, u.deg))
-            jd = Time(stellar.jd, format="jd")
-            stellar.vhelio = target.radial_velocity_correction(obstime=jd, location=rozhen).to("km/s").value
-            for i in range(len(stellar.orders)):
-                stellar.orders[i].wavelength = _remove_doppler_shift(stellar.orders[i].wavelength, stellar.vhelio)
-        except Exception as exc:
-            print(f"Error: cannot apply heliocentric velocity correction for {stellar.fits_file}: {exc}")
+    target = SkyCoord(observation.ra, observation.dec, unit=(u.hourangle, u.deg))
+    jd = Time(observation.jd, format="jd")
+    observation.vhelio = target.radial_velocity_correction(obstime=jd, location=rozhen).to("km/s").value
+    for i in range(len(observation.orders)):
+        observation.orders[i].wavelength = _remove_doppler_shift(observation.orders[i].wavelength, observation.vhelio)

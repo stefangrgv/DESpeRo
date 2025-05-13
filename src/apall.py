@@ -156,7 +156,7 @@ def _extract_2d(store: Any, observation: Any) -> None:
     observation.wavelength_calibrated = True
 
 
-def extract_2d_spectra(store: Any) -> None:  # TODO: replace store with exposure
-    for observation in store.stellar:
-        _extract_2d(store, observation)
-        _extract_2d(store, store.comp[observation.comp_index])
+def extract_2d_spectra(observation: Any) -> None:
+    store = observation.store
+    _extract_2d(store, observation)
+    _extract_2d(store, store.comp[observation.comp_index])

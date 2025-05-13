@@ -15,15 +15,14 @@ def _fit_continuum(
     return cheby_fit(wavelength)
 
 
-def normalize(store: Any) -> None:  # TODO: replace store with exposure
-    for stellar in store.stellar:
-        for i, order in enumerate(stellar.orders):
-            if len(order.wavelength):
-                try:
-                    continuum = _fit_continuum(order.wavelength, order.intensity)
-                    stellar.orders[i].normalized_intensity = order.intensity / continuum
-                except Exception as e:
-                    print(f"\tCould not normalize order #{i}: {e}")
+def normalize(observation: Any) -> None:
+    for i, order in enumerate(observation.orders):
+        if len(order.wavelength):
+            try:
+                continuum = _fit_continuum(order.wavelength, order.intensity)
+                observation.orders[i].normalized_intensity = order.intensity / continuum
+            except Exception as e:
+                print(f"\tCould not normalize order #{i}: {e}")
 
 
 @dataclass
