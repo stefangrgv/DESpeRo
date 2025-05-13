@@ -135,7 +135,7 @@ class DRS_Run:
             ui.set_status(name="normalize", finished=False)
             for observation in store.stellar:
                 try:
-                    normalize(observation)  # TODO: replace store with exposure
+                    normalize(observation)
                 except Exception as exc:
                     print(f"Error: cannot normalize {observation.fits_file}: {exc}")
             ui.set_status(name="normalize", finished=True)

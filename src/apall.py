@@ -1,6 +1,5 @@
 from typing import Any
 
-import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import find_peaks
 
@@ -22,17 +21,6 @@ def _get_orders_brightest_pixels(data: np.ndarray) -> list[list[int, int]]:
     peaks_intensity = np.array([data[peak[0]][peak[1]] for peak in all_peaks])
     top_intensity_indexes = np.argsort(peaks_intensity)[::-1][:NUMBER_OF_ECHELLE_ORDERS]
     top_intensity_indexes.sort()
-    # draw figure for paper
-    if False:
-        fig, ax = plt.subplots(nrows=2)
-        ax[0].imshow(data.T, cmap="gray", interpolation="nearest", aspect="auto", vmin=0, vmax=500)
-        # plt.imshow(data, cmap="gray")
-        peaks_x = [order_peaks_column[i] for i in top_intensity_indexes]
-        peaks_y = [order_peaks_row[i] for i in top_intensity_indexes]
-        ax[0].scatter(peaks_y, peaks_x, color="red")
-        ax[1].plot(np.linspace(0, data.shape[0], data.shape[0]), vertical_profile)
-        plt.show()
-        # plt.savefig("order_peaks-tung-led.png")
     return [[order_peaks_row[i], order_peaks_column[i]] for i in top_intensity_indexes]
 
 
@@ -118,21 +106,9 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10,
     columns = np.linspace(CUTOFF, data.shape[1] - 1 - CUTOFF, data.shape[1] - 2 * CUTOFF, dtype=int)
     found = [{"columns": columns, "rows": np.rint(np.polyval(coeffs, columns)).astype(int)} for coeffs in order_coeffs]
 
-    if draw:
-        plt.rcParams.update({"font.size": 24})
-        plt.imshow(data, cmap="gray", vmin=500, vmax=10000)
-
     for i in range(len(found)):
         coordinates = OrderCoordinates(i, found[i]["rows"], found[i]["columns"])
         store.order_coordinates.append(coordinates)
-        if draw:
-            plt.plot(coordinates.columns, coordinates.rows, color="red", alpha=0.35)
-    if draw:
-        title = f"Echelle orders found: {len(found)}"
-        plt.title(title)
-        plt.xlabel("Column number (X)")
-        plt.ylabel("Row number (Y)")
-        plt.show()
 
 
 def _extract_2d(store: Any, observation: Any) -> None:
