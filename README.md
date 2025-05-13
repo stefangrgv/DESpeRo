@@ -8,15 +8,13 @@
 2. DEspeRo requires python 3.11. You can download it from [the official python website](https://www.python.org/downloads/release/python-3110/) or use the following command in terminal (ubuntu only):
 `sudo apt install python3.11`
 
-3. Create a python virtual environment for the project. In a terminal, open the directory where you extracted DESpeRo and run:
-`python3.11 -m venv venv`
+3. Create a python virtual environment for the project. In a terminal, open the directory where you extracted DESpeRo and run: `python3.11 -m venv venv`
 
-3. Activate the virtual environment:
-`source venv/bin/activate`
+4. Activate the virtual environment: `source venv/bin/activate`
 
 **The virtual environment must be active every time you attempt to start the program.**
 
-4. Install the software by running
+5. Install the software by running
 `pip install .`
 
 ## Running DESpeRo
