@@ -25,7 +25,7 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
 
     os.makedirs(output_dir, exist_ok=True)
     for n, order in enumerate(observation.orders):
-        output_filename = f"{output_filename_base}_{n + 1}"
+        output_filename = f"{output_filename_base}_order_{n + 1}"
         with open(f"{output_dir}/{output_filename}.txt", "w") as f:
             if normalized:
                 f.write("#WAVELENGTH\tNORMALIZED INTENSITY\n")
