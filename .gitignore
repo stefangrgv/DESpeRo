@@ -172,9 +172,6 @@ cython_debug/
 
 # Project-specific
 pyproject.toml
-plot/
-pyraf/
-*/pyraf/
-comp_standard.npy
 logfile
-ascii_spectra/
+plot/
+create_comp_standard/
