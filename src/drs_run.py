@@ -49,7 +49,7 @@ class DRS_Run:
 
         if self.cosmic:
             ui.set_status(name="cosmics", finished=False)
-            clean_cosmics(store)
+            clean_cosmics(store)  # TODO: replace store with exposure
             ui.set_status(name="cosmics", finished=True)
 
         if self.bias:
@@ -73,24 +73,28 @@ class DRS_Run:
         get_comp_for_stellar(store)
 
         ui.set_status(name="spectra", finished=False)
-        extract_2d_spectra(store)
+        extract_2d_spectra(store)  # TODO: replace store with exposure
         ui.set_status(name="spectra", finished=True)
 
         ui.set_status(name="wavelength", finished=False)
-        calibrate_comp_spectra(store)
-        calibrate_stellar(store)
+        calibrate_comp_spectra(store)  # TODO: replace store with exposure
+        calibrate_stellar(store)  # TODO: replace store with exposure
         ui.set_status(name="wavelength", finished=True)
 
         if self.vhelio:
-            correct_vhelio(store)
+            correct_vhelio(store)  # TODO: replace store with exposure
 
         if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
             ui.set_status(name="normalize", finished=False)
-            normalize(store)
+            normalize(store)  # TODO: replace store with exposure
             ui.set_status(name="normalize", finished=True)
         if self.ascii_1d_norm:
             ui.set_status(name="stitch", finished=False)
-            stitch_oned(store)
+            for observation in store.stellar:
+                try:
+                    stitch_oned(observation)
+                except Exception as exc:
+                    print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
             ui.set_status(name="stitch", finished=True)
 
         ui.set_status(name="save", finished=False)

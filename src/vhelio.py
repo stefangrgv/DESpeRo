@@ -9,7 +9,7 @@ def _remove_doppler_shift(wl: float, rv: float) -> float:
     return wl + wl * (rv / 299792.458)
 
 
-def correct_vhelio(store: Any):
+def correct_vhelio(store: Any):  # TODO: replace store with exposure
     # Rozhen NAO coordinates
     latitude = 41.6925
     longitude = 24.738055

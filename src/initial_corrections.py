@@ -24,7 +24,7 @@ def correct_for_flat(store: Any) -> None:
             observation.raw_data = np.clip(corrected_data, 0, 2**16).astype(np.uint16)
 
 
-def clean_cosmics(store: Any) -> None:
+def clean_cosmics(store: Any) -> None:  # TODO: replace store with exposure
     for spectrum in [*store.comp, *store.stellar]:
         _, clean_data = astroscrappy.detect_cosmics(
             spectrum.raw_data,
