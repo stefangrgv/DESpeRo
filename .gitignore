@@ -174,4 +174,3 @@ cython_debug/
 pyproject.toml
 logfile
 plot/
-create_comp_standard/
