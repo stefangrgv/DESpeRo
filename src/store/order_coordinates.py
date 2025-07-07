@@ -3,3 +3,5 @@ class OrderCoordinates:
         self.number = number
         self.rows = rows
         self.columns = columns
+        self.lines = []
+        self.coeff = []

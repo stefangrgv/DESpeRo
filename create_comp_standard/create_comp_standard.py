@@ -7,6 +7,7 @@ from lines import lines
 from numpy.polynomial.chebyshev import chebfit, chebval
 
 from src.fit import fit_line_with_gaussian, gaussian
+from src.store.order_coordinates import OrderCoordinates
 
 LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20
@@ -51,6 +52,10 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict]) 
 
 def calibrate_order(comp_standard: Any, order_number: int) -> None:
     order = comp_standard.orders[order_number]
+    # for compability with old file format
+    order.coordinates = OrderCoordinates(
+        number=order.coordinates.number, rows=order.coordinates.rows, columns=order.coordinates.columns
+    )
 
     # normalize intensity and set its baseline to 0
     order.intensity = np.asarray(order.intensity, dtype=np.float64)

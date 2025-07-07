@@ -3,12 +3,7 @@ from typing import Any
 import numpy as np
 from scipy.signal import find_peaks
 
-from src.parameters import (
-    APERTURE_HEIGHT,
-    CUTOFF,
-    INTENSITY_THRESHOLD,
-    NUMBER_OF_ECHELLE_ORDERS,
-)
+from src.parameters import APERTURE_HEIGHT, CUTOFF, INTENSITY_THRESHOLD, NUMBER_OF_ECHELLE_ORDERS
 from src.store.order import Order
 from src.store.order_coordinates import OrderCoordinates
 

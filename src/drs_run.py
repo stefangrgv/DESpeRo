@@ -4,12 +4,7 @@ from typing import Any
 import numpy as np
 
 from src.apall import extract_2d_spectra, find_orders_coordinates
-from src.calibrate import (
-    calibrate_comp_spectra,
-    calibrate_stellar,
-    get_comp_for_stellar,
-    get_useful_comp_indexes,
-)
+from src.calibrate import calibrate_comp_spectra, calibrate_stellar, get_comp_for_stellar, get_useful_comp_indexes
 from src.initial_corrections import clean_cosmics, correct_for_bias, correct_for_flat
 from src.normalize import normalize, stitch_oned
 from src.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
