@@ -22,7 +22,7 @@ class UI:
         self.observations_dir_truncated.set(NO_DIR_STRING)
 
         self.cosmic = BooleanVar()
-        self.cosmic.set(True)
+        self.cosmic.set(False)
 
         self.bias = BooleanVar()
         self.bias.set(True)
@@ -48,7 +48,21 @@ class UI:
         self.ascii_1d_norm = BooleanVar()
         self.ascii_1d_norm.set(False)
 
-        self.output_vars = [self.fits_2d, self.fits_2d_norm, self.ascii_2d, self.ascii_2d_norm, self.ascii_1d_norm]
+        self.uncal = BooleanVar()
+        self.uncal.set(False)
+
+        self.uncal_norm = BooleanVar()
+        self.uncal_norm.set(False)
+
+        self.output_vars = [
+            self.fits_2d,
+            self.fits_2d_norm,
+            self.ascii_2d,
+            self.ascii_2d_norm,
+            self.ascii_1d_norm,
+            self.uncal,
+            self.uncal_norm,
+        ]
         for var in self.output_vars:
             var.trace_add("write", lambda *args: self._update_start_button_state())
 
@@ -169,6 +183,26 @@ class UI:
         self.ascii_1d_norm_checkbox.pack(pady=5, anchor="w")
         self.ascii_1d_norm_checkbox.config(state=tk.DISABLED)
 
+        self.uncal_checkbox = tk.Checkbutton(
+            self.output_frame,
+            text="Uncalibrated ASCII",
+            variable=self.uncal,
+            bg=BACKGROUND_COLORS["MAIN"],
+            highlightthickness=0,
+        )
+        self.uncal_checkbox.pack(pady=5, anchor="w")
+        self.uncal_checkbox.config(state=tk.DISABLED)
+
+        self.uncal_norm_checkbox = tk.Checkbutton(
+            self.output_frame,
+            text="Uncalibrated ASCII (normalized)",
+            variable=self.uncal_norm,
+            bg=BACKGROUND_COLORS["MAIN"],
+            highlightthickness=0,
+        )
+        self.uncal_norm_checkbox.pack(pady=5, anchor="w")
+        self.uncal_norm_checkbox.config(state=tk.DISABLED)
+
         self.start_button = tk.Button(self.start_frame, text="GO", command=self._go, bg=BACKGROUND_COLORS["BUTTON"])
         self.start_button.pack(fill="x", expand=True)
         self.start_button.config(state=tk.DISABLED)
@@ -242,12 +276,19 @@ class UI:
                 "label": self._create_status_label("Extract spectra"),
             }
         )
-        self.steps_labels.append(
-            {
-                "name": "wavelength",
-                "label": self._create_status_label("Calibrate for wavelength"),
-            }
-        )
+        if (
+            self.fits_2d.get()
+            or self.fits_2d_norm.get()
+            or self.ascii_2d.get()
+            or self.ascii_2d_norm.get()
+            or self.ascii_1d_norm.get()
+        ):
+            self.steps_labels.append(
+                {
+                    "name": "wavelength",
+                    "label": self._create_status_label("Calibrate for wavelength"),
+                }
+            )
         if self.fits_2d_norm.get() or self.ascii_2d_norm.get() or self.ascii_1d_norm.get():
             self.steps_labels.append(
                 {
@@ -262,12 +303,19 @@ class UI:
                     "label": self._create_status_label("Stitch spectra"),
                 }
             )
-        self.steps_labels.append(
-            {
-                "name": "save",
-                "label": self._create_status_label("Save files"),
-            }
-        )
+        if (
+            self.fits_2d.get()
+            or self.fits_2d_norm.get()
+            or self.ascii_2d.get()
+            or self.ascii_2d_norm.get()
+            or self.ascii_1d_norm.get()
+        ):
+            self.steps_labels.append(
+                {
+                    "name": "save",
+                    "label": self._create_status_label("Save files"),
+                }
+            )
 
         for steps_label in self.steps_labels:
             steps_label["label"].pack(anchor="w")
@@ -279,7 +327,9 @@ class UI:
             self.start_button.config(state=tk.DISABLED)
 
     def _select_directory(self) -> None:
-        observations_dir = askdirectory()
+        observations_dir = askdirectory(
+            initialdir="/home/stefan/science/papers/OPAnd_2025/OPAnd-archive/OPAnd-spectra/20161113.XM"
+        )
         if not observations_dir:
             return
         if "Journal.txt" in os.listdir(observations_dir):
@@ -300,6 +350,8 @@ class UI:
             self.ascii_2d_checkbox,
             self.ascii_2d_norm_checkbox,
             self.ascii_1d_norm_checkbox,
+            self.uncal_checkbox,
+            self.uncal_norm_checkbox,
         ]:
             setting.config(state=(tk.ACTIVE if state else tk.DISABLED))
 
@@ -315,6 +367,8 @@ class UI:
             ascii_2d=self.ascii_2d.get(),
             ascii_2d_norm=self.ascii_2d_norm.get(),
             ascii_1d_norm=self.ascii_1d_norm.get(),
+            uncal=self.uncal.get(),
+            uncal_norm=self.uncal_norm.get(),
         )
         thread = threading.Thread(target=drs_run.start, args=(self,))
         thread.start()

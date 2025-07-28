@@ -24,7 +24,16 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
             else:
                 flux_array = observation.orders[i].intensity
             wavelength = observation.orders[i].wavelength
-            cheb_coefs = observation.orders[i].coordinates.coeff.tolist()
+
+            if len(wavelength) == 0:
+                print(f"Warning: No wavelength data for order #{i + 1} of {observation.fits_file}.")
+                continue
+            # Check if coordinates.coeff is a list, otherwise convert to list
+            coeff = observation.orders[i].coordinates.coeff
+            if isinstance(coeff, list):
+                cheb_coefs = coeff
+            else:
+                cheb_coefs = coeff.tolist()
 
             hdu = fits.PrimaryHDU(data=flux_array)
             hdr = hdu.header
@@ -48,7 +57,7 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
             hdr.update(w.to_header())
             hdr["WAT1_001"] = "system=multispec label=Wavelength units=Angstroms"
             order = len(cheb_coefs) - 1
-            coeff_str = " ".join(f"coeff{i}={coef:.6g}" for i, coef in enumerate(cheb_coefs))
+            coeff_str = " ".join(f"coeff{c}={coef:.6g}" for c, coef in enumerate(cheb_coefs))
             hdr["WAT2_001"] = f"wtype=chebyshev order={order} {coeff_str}"
             hdu.writeto(f"{output_dir}/{output_filename_base}_order_{i + 1}.fits", overwrite=True)
         except Exception as exc:

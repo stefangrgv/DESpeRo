@@ -1,5 +1,7 @@
 from typing import Any
 
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 
 from src.fit import fit_line_with_gaussian, get_finetuned_chebyshev, is_fit_ok
@@ -10,7 +12,7 @@ def get_useful_comp_indexes(store: Any):
     return list(set(useful_indexes))
 
 
-def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
+def calibrate_comp_spectra(comp: Any, comp_standard: Any, draw: bool = False) -> None:
     for order in comp.orders:
         order.intensity = np.asarray(order.intensity, dtype=np.float16)
         order.intensity /= np.max(order.intensity)
@@ -22,6 +24,10 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
     order_shift = np.median(
         np.linspace(0, len(comp_standard.orders) - 1, len(comp_standard.orders)) - np.asarray(corresponding_apertures)
     ).astype(int)
+    if draw:
+        import time
+
+        matplotlib.use("TkAgg")
     for i_standard in range(len(comp_standard.orders)):
         if i_standard != corresponding_apertures[i_standard] + order_shift:
             # Order does not match any order in the comparison standard - will be ignored
@@ -33,6 +39,8 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
         comp_intensity /= np.max(comp_intensity)
         comp_intensity -= np.min(comp_intensity)
         lines_column, lines_wavelength = [], []
+        if draw:
+            plt.plot(comp_order.coordinates.columns, comp_intensity)
         for line in standard_order.coordinates.lines:
             try:
                 line_fit_coeffs = fit_line_with_gaussian(comp_order.coordinates.columns, comp_intensity, int(line[0]))
@@ -46,6 +54,11 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
             comp_order.coordinates.coeff = cheby_fit.coef
             comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
+        #     plt.axvline(line[0], color="red")
+        # plt.show()
+        # time.sleep(1)
+        # plt.cla()
+        # plt.clf()
 
 
 def get_comp_for_stellar(store: Any) -> None:

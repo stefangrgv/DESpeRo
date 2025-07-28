@@ -7,7 +7,7 @@ from src.apall import extract_2d_spectra, find_orders_coordinates
 from src.calibrate import calibrate_comp_spectra, calibrate_stellar, get_comp_for_stellar, get_useful_comp_indexes
 from src.initial_corrections import clean_cosmics, correct_for_bias, correct_for_flat
 from src.normalize import normalize, stitch_oned
-from src.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
+from src.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii, save_uncalibrated, save_uncalibrated_normalized
 from src.save.as_fits import save_as_fits
 from src.store.store import Store
 from src.utils import open_directory
@@ -27,6 +27,8 @@ class DRS_Run:
         ascii_2d: bool,
         ascii_2d_norm: bool,
         ascii_1d_norm: bool,
+        uncal: bool,
+        uncal_norm: bool,
     ):
         self.observation_dir = observation_dir
         self.cosmic = cosmic
@@ -38,6 +40,8 @@ class DRS_Run:
         self.ascii_2d = ascii_2d
         self.ascii_2d_norm = ascii_2d_norm
         self.ascii_1d_norm = ascii_1d_norm
+        self.uncal = (uncal,)
+        self.uncal_norm = uncal_norm
 
     def start(self, ui: Any):
         if ui:
@@ -76,8 +80,15 @@ class DRS_Run:
             store.create_master_flats()
             ui.set_status(name="flat", finished=True)
 
+        try:
+            comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
+        except FileNotFoundError as err:
+            print("Error: comp standard not found!")
+            print(err)
+            sys.exit()
+
         ui.set_status(name="orders", finished=False)
-        find_orders_coordinates(store, use_master_flat=self.flat)
+        find_orders_coordinates(store, use_master_flat=self.flat, draw=True, comp_standard=comp_standard)
         ui.set_status(name="orders", finished=True)
 
         if self.flat:
@@ -99,18 +110,24 @@ class DRS_Run:
                 print(f"Error: cannot extract 2D spectrum from {observation.fits_file}: {exc}")
         ui.set_status(name="spectra", finished=True)
 
+        if self.uncal:
+            for observation in store.stellar:
+                save_uncalibrated(observation)
+
+        if self.uncal_norm:
+            for observation in store.stellar:
+                save_uncalibrated_normalized(observation)
+
+        if not (self.fits_2d or self.fits_2d_norm or self.ascii_2d or self.ascii_2d_norm or self.ascii_1d_norm):
+            ui.root.after(0, ui.root.destroy)
+            exit()
+
         ui.set_status(name="wavelength", finished=False)
-        try:
-            comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
-        except FileNotFoundError as err:
-            print("Error: comp standard not found!")
-            print(err)
-            sys.exit()
         useful_comp_indexes = get_useful_comp_indexes(store)
         for comp_index, comp in enumerate(store.comp):
             if comp_index not in useful_comp_indexes:
                 continue
-            calibrate_comp_spectra(comp, comp_standard)
+            calibrate_comp_spectra(comp, comp_standard, draw=False)
 
         ui.set_status(name="wavelength", finished=True)
         for observation in store.stellar:

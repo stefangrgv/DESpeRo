@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from src.normalize import _fit_continuum
+
 
 def save_as_1d_ascii_norm(observation: Any) -> None:
     output_dir = Path(os.path.dirname(observation.fits_file))
@@ -35,3 +37,33 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
                 f.write("#WAVELENGTH\tINTENSITY\n")
                 for i in range(len(order.wavelength)):
                     f.write(f"{order.wavelength[i]:.10f}\t{order.intensity[i]:.10f}\n")
+
+
+def save_uncalibrated(observation: Any) -> None:
+    output_filename_base = os.path.basename(observation.fits_file.replace(".fits", "").replace(".FITS", ""))
+    output_dir = Path(os.path.dirname(observation.fits_file)) / "uncalibrated" / output_filename_base
+    os.makedirs(output_dir, exist_ok=True)
+    for n, order in enumerate(observation.orders):
+        filename = output_dir / f"{n:02d}.txt"
+        with open(filename, "w") as f:
+            f.write("#WAVELENGTH\tINTENSITY\n")
+            for i, column in enumerate(order.coordinates.columns):
+                f.write(f"{column}\t{order.intensity[i]:.10f}\n")
+
+
+def save_uncalibrated_normalized(observation: Any) -> None:
+    output_filename_base = os.path.basename(observation.fits_file.replace(".fits", "").replace(".FITS", ""))
+    output_dir = Path(os.path.dirname(observation.fits_file)) / "uncalibrated_normalized" / output_filename_base
+    os.makedirs(output_dir, exist_ok=True)
+    for n, order in enumerate(observation.orders):
+        if len(order.coordinates.columns):
+            try:
+                continuum = _fit_continuum(order.coordinates.columns, order.intensity)
+                normalized_intensity = order.intensity / continuum
+            except Exception as e:
+                print(f"\tCould not normalize order #{n}: {e}")
+            filename = output_dir / f"{n:02d}.txt"
+            with open(filename, "w") as f:
+                f.write("#WAVELENGTH\tINTENSITY\n")
+                for i, column in enumerate(order.coordinates.columns):
+                    f.write(f"{column}\t{normalized_intensity[i]:.10f}\n")
