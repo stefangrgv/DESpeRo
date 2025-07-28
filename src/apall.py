@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import ttk
 from typing import Any
@@ -5,9 +6,11 @@ from typing import Any
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
 from scipy.signal import find_peaks
 
 from src.parameters import APERTURE_HEIGHT, CUTOFF, INTENSITY_THRESHOLD, NUMBER_OF_ECHELLE_ORDERS
+from src.store.apall_store import ApallStore
 from src.store.order import Order
 from src.store.order_coordinates import OrderCoordinates
 
@@ -93,13 +96,14 @@ def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, fou
     return pixels
 
 
-def _get_coordinates(data: Any, degree: int, threshold: int = INTENSITY_THRESHOLD):
+def _get_coordinates(apall_store: Any, degree: int):
+    data = apall_store.apall_image.raw_data
     orders_brightest_pixels = _get_orders_brightest_pixels(data)
     found = []
     for i in range(len(orders_brightest_pixels)):
         starting_row = orders_brightest_pixels[i][0]
         starting_column = orders_brightest_pixels[i][1]
-        order = _trace_order(data, starting_row, starting_column, found, threshold)
+        order = _trace_order(data, starting_row, starting_column, found, apall_store.threshold)
         if order:
             found.append(np.asarray([[point["column"], point["row"]] for point in order]))
     order_coeffs = [np.polyfit(order[:, 0], order[:, 1], degree) for order in found]
@@ -108,106 +112,132 @@ def _get_coordinates(data: Any, degree: int, threshold: int = INTENSITY_THRESHOL
     return found
 
 
-def _apply_found(store: Any, found: list, draw: bool, ax: Any, data: list) -> None:
+def _apply_found(store: Any, found: list, apall_store: Any) -> None:
     store.order_coordinates = []
-    if draw:
-        ax.cla()
-        img = ax.imshow(data, cmap="gray", vmin=0, vmax=200)
+    apall_store.ax.remove()
+    apall_store.ax = apall_store.fig.add_subplot(111)
+    apall_store.imshow_image = apall_store.ax.imshow(apall_store.apall_image.raw_data, cmap="gray", vmin=0, vmax=200)
 
     for i in range(len(found)):
         coordinates = OrderCoordinates(i, found[i]["rows"], found[i]["columns"])
         store.order_coordinates.append(coordinates)
-        if draw:
-            ax.scatter(found[i]["columns"], found[i]["rows"], color="red", s=1, alpha=0.15)
+        apall_store.ax.scatter(found[i]["columns"], found[i]["rows"], color="red", s=1, alpha=0.15)
 
-    if draw:
-        return img
+    apall_store.fig.savefig(apall_store.apall_image.fits_file + ".jpg")
 
 
-def _draw_standard_orders(comp_standard, ax):
+def _draw_standard_orders(comp_standard, apall_store):
     for order_std in comp_standard.orders:
-        ax.scatter(order_std.coordinates.columns, order_std.coordinates.rows, color="lime", s=2, alpha=0.15)
+        apall_store.ax.scatter(order_std.coordinates.columns, order_std.coordinates.rows, color="lime", s=2, alpha=0.15)
 
 
-def find_orders_coordinates(
-    store: Any, use_master_flat: bool, comp_standard: Any, degree: int = 10, draw: bool = False
-) -> None:
+def _fits_file_to_name(fits_file: str) -> str:
+    return os.path.basename(fits_file).replace(".fits", "").replace(".FITS", "")
+
+
+def find_orders_coordinates(store: Any, use_master_flat: bool, comp_standard: Any, degree: int = 10) -> None:
+    apall_store = ApallStore()
     if use_master_flat:
-        data = store.master_flats[0].raw_data
+        apall_store.apall_image = store.master_flats[0]
     else:
-        data = np.median([flat.raw_data for flat in store.flat], axis=0)
+        # data = np.median([flat.raw_data for flat in store.flat], axis=0)
+        apall_store.apall_image = store.stellar[0]
 
-    found = _get_coordinates(data, degree)
+    apall_store.fig = Figure(figsize=(5, 4))
+    apall_store.ax = apall_store.fig.add_subplot(111)
+    root = tk.Tk()
+    root.title("Order coordinates")
 
-    if draw:
-        fig = plt.gcf()
-        ax = plt.gca()
-        root = tk.Tk()
-        root.title("Order coordinates")
+    frame_plot = ttk.Frame(root)
+    frame_plot.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+    canvas = FigureCanvasTkAgg(apall_store.fig, master=frame_plot)
+    canvas.draw()
 
-    img = _apply_found(store, found, draw, ax, data)
+    # Get the widget from the canvas and pack it into the window
+    canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    # Add the navigation toolbar
+    toolbar = NavigationToolbar2Tk(canvas, frame_plot)
+    toolbar.update()
+    toolbar.pack(side=tk.TOP, fill=tk.X)
 
-    if draw:
-        _draw_standard_orders(comp_standard, ax)
+    # --- Controls Frame ---
+    frame_controls = ttk.Frame(root)
+    frame_controls.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
+    # Entry for vmin
+    ttk.Label(frame_controls, text="vmin:").pack(side=tk.LEFT)
+    entry_vmin = ttk.Entry(frame_controls, width=6)
+    entry_vmin.insert(0, "0")
+    entry_vmin.pack(side=tk.LEFT)
 
-        frame_plot = ttk.Frame(root)
-        frame_plot.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        canvas = FigureCanvasTkAgg(fig, master=frame_plot)
+    # Entry for vmax
+    ttk.Label(frame_controls, text="vmax:").pack(side=tk.LEFT)
+    entry_vmax = ttk.Entry(frame_controls, width=6)
+    entry_vmax.insert(0, "100")
+    entry_vmax.pack(side=tk.LEFT)
+
+    # Update button
+    def update_color_scale():
+        try:
+            vmin = float(entry_vmin.get())
+            vmax = float(entry_vmax.get())
+            apall_store.imshow_image.set_clim(vmin, vmax)  # Update color limits
+            canvas.draw()
+        except ValueError:
+            print("Please enter valid numbers for vmin and vmax.")
+
+    ttk.Button(frame_controls, text="Apply", command=update_color_scale).pack(side=tk.LEFT, padx=10)
+
+    ttk.Label(frame_controls, text="Intensity threshold:").pack(side=tk.LEFT)
+    entry_threshold = ttk.Entry(frame_controls, width=6)
+    entry_threshold.insert(0, str(INTENSITY_THRESHOLD))
+    entry_threshold.pack(side=tk.LEFT)
+
+    show_comp = tk.BooleanVar()
+    show_comp.set(False)
+
+    def redraw():
+        apall_store.ax.clear()
+        found = _get_coordinates(apall_store, degree)
+        _apply_found(store, found, apall_store)
+        if show_comp.get():
+            _draw_standard_orders(comp_standard, apall_store)
         canvas.draw()
 
-        # Get the widget from the canvas and pack it into the window
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
-        # Add the navigation toolbar
-        toolbar = NavigationToolbar2Tk(canvas, frame_plot)
-        toolbar.update()
-        toolbar.pack(side=tk.TOP, fill=tk.X)
+    comp_checkbox = tk.Checkbutton(
+        frame_controls, text="Show comp standard orders", variable=show_comp, highlightthickness=0, command=redraw
+    )
+    comp_checkbox.pack(side=tk.LEFT)
 
-        # --- Controls Frame ---
-        frame_controls = ttk.Frame(root)
-        frame_controls.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
-        # Entry for vmin
-        ttk.Label(frame_controls, text="vmin:").pack(side=tk.LEFT)
-        entry_vmin = ttk.Entry(frame_controls, width=6)
-        entry_vmin.insert(0, "0")
-        entry_vmin.pack(side=tk.LEFT)
+    def update_threshold():
+        try:
+            apall_store.threshold = float(entry_threshold.get())
+            redraw()
+            canvas.draw()
+        except ValueError:
+            print("Please enter a valid integer.")
 
-        # Entry for vmax
-        ttk.Label(frame_controls, text="vmax:").pack(side=tk.LEFT)
-        entry_vmax = ttk.Entry(frame_controls, width=6)
-        entry_vmax.insert(0, "100")
-        entry_vmax.pack(side=tk.LEFT)
+    ttk.Button(frame_controls, text="Apply", command=update_threshold).pack(side=tk.LEFT, padx=10)
 
-        # Update button
-        def update_color_scale():
-            try:
-                vmin = float(entry_vmin.get())
-                vmax = float(entry_vmax.get())
-                img.set_clim(vmin, vmax)  # Update color limits
-                canvas.draw()
-            except ValueError:
-                print("Please enter valid numbers for vmin and vmax.")
+    ttk.Label(frame_controls, text="Apall spectrum:").pack(side=tk.LEFT, padx=(10, 2))
+    file_options = [_fits_file_to_name(stellar.fits_file) for stellar in store.stellar]
+    file_menu = ttk.Combobox(frame_controls, values=file_options, state="readonly", width=10)
+    file_menu.current(0)
+    file_menu.pack(side=tk.LEFT)
 
-        ttk.Button(frame_controls, text="Update Color Scale", command=update_color_scale).pack(side=tk.LEFT, padx=10)
+    def update_file(event):
+        selected_cmap = file_menu.get()
+        if selected_cmap == "Master flat":
+            apall_store.apall_image = store.master_flats[0]  # TODO
+        else:
+            for stellar in store.stellar:
+                if _fits_file_to_name(stellar.fits_file) == selected_cmap:
+                    apall_store.apall_image = stellar
+        redraw()
 
-        ttk.Label(frame_controls, text="vmax:").pack(side=tk.LEFT)
-        entry_threshold = ttk.Entry(frame_controls, width=6)
-        entry_threshold.insert(0, str(INTENSITY_THRESHOLD))
-        entry_threshold.pack(side=tk.LEFT)
+    file_menu.bind("<<ComboboxSelected>>", update_file)
 
-        def update_threshold():
-            try:
-                threshold = float(entry_threshold.get())
-                found = _get_coordinates(data, degree, threshold)
-                img = _apply_found(store, found, draw, ax, data)
-                _draw_standard_orders(comp_standard, ax)
-                canvas.draw()
-            except ValueError:
-                print("Please enter a valid integer.")
-
-        ttk.Button(frame_controls, text="Update intensity threshold", command=update_threshold).pack(
-            side=tk.LEFT, padx=10
-        )
-        root.mainloop()
+    redraw()
+    root.mainloop()
 
 
 def _extract_2d(store: Any, observation: Any) -> None:

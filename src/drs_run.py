@@ -88,7 +88,7 @@ class DRS_Run:
             sys.exit()
 
         ui.set_status(name="orders", finished=False)
-        find_orders_coordinates(store, use_master_flat=self.flat, draw=True, comp_standard=comp_standard)
+        find_orders_coordinates(store, use_master_flat=self.flat, comp_standard=comp_standard)
         ui.set_status(name="orders", finished=True)
 
         if self.flat:

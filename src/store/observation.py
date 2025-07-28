@@ -33,6 +33,6 @@ class Observation:
             self.raw_data = raw_data
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
-                self.ra = header["RA"]
-                self.dec = header["DEC"]
-                self.jd = header["JD-OBS"]
+                self.ra = header.get("RA", None)
+                self.dec = header.get("DEC", None)
+                self.jd = header.get("JD-OBS", None)
