@@ -56,14 +56,14 @@ def save_uncalibrated_normalized(observation: Any) -> None:
     output_dir = Path(os.path.dirname(observation.fits_file)) / "uncalibrated_normalized" / output_filename_base
     os.makedirs(output_dir, exist_ok=True)
     for n, order in enumerate(observation.orders):
-        if len(order.coordinates.columns):
-            try:
-                continuum = _fit_continuum(order.coordinates.columns, order.intensity)
-                normalized_intensity = order.intensity / continuum
-            except Exception as e:
-                print(f"\tCould not normalize order #{n}: {e}")
-            filename = output_dir / f"{n:02d}.txt"
-            with open(filename, "w") as f:
-                f.write("#WAVELENGTH\tINTENSITY\n")
-                for i, column in enumerate(order.coordinates.columns):
-                    f.write(f"{column}\t{normalized_intensity[i]:.10f}\n")
+        filename = output_dir / f"{n:02d}.txt"
+        with open(filename, "w") as f:
+            f.write("#WAVELENGTH\tINTENSITY\n")
+            if len(order.coordinates.columns):
+                try:
+                    continuum = _fit_continuum(order.coordinates.columns, order.intensity)
+                    normalized_intensity = order.intensity / continuum
+                    for i, column in enumerate(order.coordinates.columns):
+                        f.write(f"{column}\t{normalized_intensity[i]:.10f}\n")
+                except Exception as e:
+                    print(f"\tCould not normalize order #{n}: {e}")

@@ -123,8 +123,6 @@ def _apply_found(store: Any, found: list, apall_store: Any) -> None:
         store.order_coordinates.append(coordinates)
         apall_store.ax.scatter(found[i]["columns"], found[i]["rows"], color="red", s=1, alpha=0.15)
 
-    apall_store.fig.savefig(apall_store.apall_image.fits_file + ".jpg")
-
 
 def _draw_standard_orders(comp_standard, apall_store):
     for order_std in comp_standard.orders:
@@ -219,7 +217,7 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, comp_standard: An
     ttk.Button(frame_controls, text="Apply", command=update_threshold).pack(side=tk.LEFT, padx=10)
 
     ttk.Label(frame_controls, text="Apall spectrum:").pack(side=tk.LEFT, padx=(10, 2))
-    file_options = [_fits_file_to_name(stellar.fits_file) for stellar in store.stellar]
+    file_options = ["Master flat"] + [_fits_file_to_name(stellar.fits_file) for stellar in store.stellar]
     file_menu = ttk.Combobox(frame_controls, values=file_options, state="readonly", width=10)
     file_menu.current(0)
     file_menu.pack(side=tk.LEFT)
@@ -237,6 +235,11 @@ def find_orders_coordinates(store: Any, use_master_flat: bool, comp_standard: An
     file_menu.bind("<<ComboboxSelected>>", update_file)
 
     redraw()
+
+    def ok():
+        root.after(0, root.destroy())
+
+    ttk.Button(frame_controls, text="OK", command=ok).pack(side=tk.LEFT, padx=50)
     root.mainloop()
 
 
