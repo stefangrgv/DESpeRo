@@ -22,7 +22,7 @@ def normalize(observation: Any) -> None:
                 continuum = _fit_continuum(order.wavelength, order.intensity)
                 observation.orders[i].normalized_intensity = order.intensity / continuum
             except Exception as e:
-                print(f"\tCould not normalize order #{i}: {e}")
+                print(f"\tCould not normalize order #{i} of {observation.filename}: {e}")
 
 
 @dataclass

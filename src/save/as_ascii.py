@@ -66,4 +66,4 @@ def save_uncalibrated_normalized(observation: Any) -> None:
                     for i, column in enumerate(order.coordinates.columns):
                         f.write(f"{column}\t{normalized_intensity[i]:.10f}\n")
                 except Exception as e:
-                    print(f"\tCould not normalize order #{n}: {e}")
+                    print(f"\tCould not normalize order #{n} of {observation.filename}: {e}")

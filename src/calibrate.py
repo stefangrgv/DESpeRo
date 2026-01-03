@@ -34,7 +34,11 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any, draw: bool = False) ->
             continue
         i_comp = i_standard - order_shift
         standard_order = comp_standard.orders[i_standard]
-        comp_order = comp.orders[i_comp]
+        try:
+            comp_order = comp.orders[i_comp]
+        except IndexError as exc:
+            print(f"Error getting comp order: {exc}")
+            continue
         comp_intensity = np.asarray(comp_order.intensity, dtype=np.float16)
         comp_intensity /= np.max(comp_intensity)
         comp_intensity -= np.min(comp_intensity)

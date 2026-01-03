@@ -36,3 +36,7 @@ class Observation:
                 self.ra = header.get("RA", None)
                 self.dec = header.get("DEC", None)
                 self.jd = header.get("JD-OBS", None)
+
+    @property
+    def filename(self) -> str:
+        return self.fits_file.split("/")[-1].replace(".fits", "").replace(".FITS", "")
