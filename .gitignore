@@ -174,3 +174,11 @@ cython_debug/
 pyproject.toml
 logfile
 plot/
+webapp/server/uploads/
+
+# node modules
+webapp/node_modules/*
+
+# temporary
+src/trace/*
+
