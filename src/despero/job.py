@@ -41,24 +41,29 @@ class Job:
         self.ascii_2d_norm = ascii_2d_norm
         self.ascii_1d_norm = ascii_1d_norm
 
-    def start(self, ui: Any):
-        if ui:
-            ui.render_working_screen()
+    def start(self, reporter: Any | None = None):
+        if reporter:
+            reporter.render_working_screen()
 
         store = Store(self.observation_dir)
         store.load_journal_from_file()
 
         if self.cosmic:
-            ui.set_status(name="cosmics", finished=False)
+            if reporter:
+                reporter.set_status(name="cosmics", finished=False)
+
             for observation in store.stellar:
                 try:
                     clean_cosmics(observation)
                 except Exception as exc:
                     print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
-            ui.set_status(name="cosmics", finished=True)
+            if reporter:
+                reporter.set_status(name="cosmics", finished=True)
 
         if self.bias:
-            ui.set_status(name="bias", finished=False)
+            if reporter:
+                reporter.set_status(name="bias", finished=False)
+
             store.create_master_biases()
             observations_to_correct_for_bias = [*store.flat, *store.comp, *store.stellar]
             for master_bias in store.master_biases:
@@ -71,16 +76,24 @@ class Job:
                         correct_for_bias(observation, master_bias)
                     except Exception as exc:
                         print(f"Error: cannot apply bias correction to {observation.fits_file}: {exc}")
-            ui.set_status(name="bias", finished=True)
+            if reporter:
+                reporter.set_status(name="bias", finished=True)
 
         if self.flat:
-            ui.set_status(name="flat", finished=False)
-            store.create_master_flats()
-            ui.set_status(name="flat", finished=True)
+            if reporter:
+                reporter.set_status(name="flat", finished=False)
 
-        ui.set_status(name="orders", finished=False)
+            store.create_master_flats()
+
+            if reporter:
+                reporter.set_status(name="flat", finished=True)
+
+        if reporter:
+            reporter.set_status(name="orders", finished=False)
         find_orders_coordinates(store, use_master_flat=self.flat)
-        ui.set_status(name="orders", finished=True)
+
+        if reporter:
+            reporter.set_status(name="orders", finished=True)
 
         if self.flat:
             for master_flat in store.master_flats:
@@ -93,28 +106,35 @@ class Job:
                         print(f"Error: cannot apply flat correction to {observation.fits_file}: {exc}")
         get_comp_for_stellar(store)
 
-        ui.set_status(name="spectra", finished=False)
+        if reporter:
+            reporter.set_status(name="spectra", finished=False)
+
         for observation in store.stellar:
             try:
                 extract_2d_spectra(observation)
             except Exception as exc:
                 print(f"Error: cannot extract 2D spectrum from {observation.fits_file}: {exc}")
-        ui.set_status(name="spectra", finished=True)
 
-        ui.set_status(name="wavelength", finished=False)
+        if reporter:
+            reporter.set_status(name="spectra", finished=True)
+            reporter.set_status(name="wavelength", finished=False)
+
         try:
             comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
         except FileNotFoundError as err:
             print("Error: comp standard not found!")
             print(err)
-            sys.exit()
+            return
+
         useful_comp_indexes = get_useful_comp_indexes(store)
         for comp_index, comp in enumerate(store.comp):
             if comp_index not in useful_comp_indexes:
                 continue
             calibrate_comp_spectra(comp, comp_standard)
 
-        ui.set_status(name="wavelength", finished=True)
+        if reporter:
+            reporter.set_status(name="wavelength", finished=True)
+
         for observation in store.stellar:
             try:
                 calibrate_stellar(observation)
@@ -129,24 +149,34 @@ class Job:
                     print(f"Error: cannot perform VHELIO correction for {observation.fits_file}: {exc}")
 
         if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
-            ui.set_status(name="normalize", finished=False)
+            if reporter:
+                reporter.set_status(name="normalize", finished=False)
+
             for observation in store.stellar:
                 try:
                     normalize(observation)
                 except Exception as exc:
                     print(f"Error: cannot normalize {observation.fits_file}: {exc}")
-            ui.set_status(name="normalize", finished=True)
+
+            if reporter:
+                reporter.set_status(name="normalize", finished=True)
 
         if self.ascii_1d_norm:
-            ui.set_status(name="stitch", finished=False)
+            if reporter:
+                reporter.set_status(name="stitch", finished=False)
+
             for observation in store.stellar:
                 try:
                     stitch_oned(observation)
                 except Exception as exc:
                     print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
-            ui.set_status(name="stitch", finished=True)
 
-        ui.set_status(name="save", finished=False)
+            if reporter:
+                reporter.set_status(name="stitch", finished=True)
+
+        if reporter:
+            reporter.set_status(name="save", finished=False)
+
         for observation in store.stellar:
             if self.fits_2d:
                 save_as_fits(observation)
@@ -158,8 +188,12 @@ class Job:
                 save_as_2d_ascii(observation, normalized=True)
             if self.ascii_1d_norm:
                 save_as_1d_ascii_norm(observation)
-        ui.set_status(name="save", finished=True)
 
-        ui.root.after(0, ui.root.destroy)
+        if reporter:
+            reporter.set_status(name="save", finished=True)
+
+        if reporter:
+            reporter.set_finished()
+
         open_directory(store.output_directory)
         exit()

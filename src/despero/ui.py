@@ -303,8 +303,11 @@ class UI:
         ]:
             setting.config(state=(tk.ACTIVE if state else tk.DISABLED))
 
+    def set_finished(self):
+        self.root.after(0, self.root.destroy)
+
     def _go(self) -> None:
-        Job = Job(
+        job = Job(
             observation_dir=self.observations_dir.get(),
             cosmic=self.cosmic.get(),
             bias=self.bias.get(),
@@ -316,5 +319,5 @@ class UI:
             ascii_2d_norm=self.ascii_2d_norm.get(),
             ascii_1d_norm=self.ascii_1d_norm.get(),
         )
-        thread = threading.Thread(target=Job.start, args=(self,))
+        thread = threading.Thread(target=job.start, args=(self,))
         thread.start()
