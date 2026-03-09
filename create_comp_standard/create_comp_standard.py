@@ -6,8 +6,8 @@ import numpy as np
 from lines import lines
 from numpy.polynomial.chebyshev import chebfit, chebval
 
-from src.fit import fit_line_with_gaussian, gaussian
-from src.store.order_coordinates import OrderCoordinates
+from despero.fit import fit_line_with_gaussian, gaussian
+from despero.store.order_coordinates import OrderCoordinates
 
 LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20

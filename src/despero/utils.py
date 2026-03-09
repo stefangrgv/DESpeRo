@@ -7,8 +7,8 @@ from enum import Enum
 import numpy as np
 from astropy.io import fits
 
-from src.store.order import Order
-from src.store.order_coordinates import OrderCoordinates
+from despero.store.order import Order
+from despero.store.order_coordinates import OrderCoordinates
 
 
 class EXPOSURE_TYPES(Enum):

@@ -1,6 +1,6 @@
 from typing import Any
 
-from src.utils import EXPOSURE_TYPES, load_fits
+from despero.utils import EXPOSURE_TYPES, load_fits
 
 
 class Observation:

@@ -2,7 +2,8 @@ from typing import Any
 
 import numpy as np
 
-from src.fit import fit_line_with_gaussian, get_finetuned_chebyshev, is_fit_ok
+from despero.fit import (fit_line_with_gaussian, get_finetuned_chebyshev,
+                         is_fit_ok)
 
 
 def get_useful_comp_indexes(store: Any):

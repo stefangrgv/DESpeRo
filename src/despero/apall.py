@@ -3,9 +3,10 @@ from typing import Any
 import numpy as np
 from scipy.signal import find_peaks
 
-from src.parameters import APERTURE_HEIGHT, CUTOFF, INTENSITY_THRESHOLD, NUMBER_OF_ECHELLE_ORDERS
-from src.store.order import Order
-from src.store.order_coordinates import OrderCoordinates
+from despero.parameters import (APERTURE_HEIGHT, CUTOFF, INTENSITY_THRESHOLD,
+                                NUMBER_OF_ECHELLE_ORDERS)
+from despero.store.order import Order
+from despero.store.order_coordinates import OrderCoordinates
 
 
 def _get_orders_brightest_pixels(data: np.ndarray) -> list[list[int, int]]:

@@ -4,10 +4,10 @@ from pathlib import Path
 
 import numpy as np
 
-from src import utils
-from src.store.master_bias import MasterBias
-from src.store.master_flat import MasterFlat
-from src.store.observation import Observation
+from despero import utils
+from despero.store.master_bias import MasterBias
+from despero.store.master_flat import MasterFlat
+from despero.store.observation import Observation
 
 
 class Store:

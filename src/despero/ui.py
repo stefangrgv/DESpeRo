@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import BooleanVar, StringVar, messagebox
 from tkinter.filedialog import askdirectory
 
-from src.drs_run import DRS_Run
+from despero.job import Job
 
 NO_DIR_STRING = "No selected directory"
 BACKGROUND_COLORS = {"MAIN": "#ebebeb", "BUTTON": "#e0e0e0"}
@@ -304,7 +304,7 @@ class UI:
             setting.config(state=(tk.ACTIVE if state else tk.DISABLED))
 
     def _go(self) -> None:
-        drs_run = DRS_Run(
+        Job = Job(
             observation_dir=self.observations_dir.get(),
             cosmic=self.cosmic.get(),
             bias=self.bias.get(),
@@ -316,5 +316,5 @@ class UI:
             ascii_2d_norm=self.ascii_2d_norm.get(),
             ascii_1d_norm=self.ascii_1d_norm.get(),
         )
-        thread = threading.Thread(target=drs_run.start, args=(self,))
+        thread = threading.Thread(target=Job.start, args=(self,))
         thread.start()
