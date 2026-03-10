@@ -38,7 +38,7 @@ class Job:
         self.ascii_2d_norm = ascii_2d_norm
         self.ascii_1d_norm = ascii_1d_norm
 
-    def start(self, reporter: Any | None = None):
+    def start(self, reporter: Any | None = None, show_files_when_done: bool = False):
         if reporter:
             reporter.render_working_screen()
 
@@ -192,5 +192,5 @@ class Job:
         if reporter:
             reporter.set_finished()
 
-        open_directory(store.output_directory)
-        exit()
+        if show_files_when_done:
+            open_directory(store.output_directory)

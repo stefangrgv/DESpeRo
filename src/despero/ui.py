@@ -319,5 +319,6 @@ class UI:
             ascii_2d_norm=self.ascii_2d_norm.get(),
             ascii_1d_norm=self.ascii_1d_norm.get(),
         )
-        thread = threading.Thread(target=job.start, args=(self,))
+        browse_files_when_done = True
+        thread = threading.Thread(target=job.start, args=(self, browse_files_when_done))
         thread.start()
