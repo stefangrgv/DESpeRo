@@ -3,10 +3,12 @@ import os
 import subprocess
 import sys
 from enum import Enum
+from importlib.resources import files
 
 import numpy as np
 from astropy.io import fits
 
+import despero
 from despero.store.order import Order
 from despero.store.order_coordinates import OrderCoordinates
 
@@ -68,3 +70,8 @@ def open_directory(path):
         subprocess.run(["xdg-open", path], check=True)
     else:
         raise OSError("Unsupported operating system")
+
+
+def load_comp_standard():
+    comp_standard_path = files(despero) / "comp_standard.npy"
+    return np.load(comp_standard_path, allow_pickle=True).tolist()

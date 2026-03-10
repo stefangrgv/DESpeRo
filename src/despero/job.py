@@ -1,7 +1,4 @@
-import sys
 from typing import Any
-
-import numpy as np
 
 from despero.apall import extract_2d_spectra, find_orders_coordinates
 from despero.calibrate import (calibrate_comp_spectra, calibrate_stellar,
@@ -12,7 +9,7 @@ from despero.normalize import normalize, stitch_oned
 from despero.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
 from despero.save.as_fits import save_as_fits
 from despero.store.store import Store
-from despero.utils import open_directory
+from despero.utils import load_comp_standard, open_directory
 from despero.vhelio import correct_vhelio
 
 
@@ -120,7 +117,7 @@ class Job:
             reporter.set_status(name="wavelength", finished=False)
 
         try:
-            comp_standard = np.load("comp_standard.npy", allow_pickle=True).tolist()
+            comp_standard = load_comp_standard()
         except FileNotFoundError as err:
             print("Error: comp standard not found!")
             print(err)

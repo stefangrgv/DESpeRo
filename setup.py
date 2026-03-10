@@ -5,6 +5,8 @@ setup(
     version="1.0",
     package_dir={"": "src"},
     packages=find_packages(where="src"),
+    include_package_data=True,
+    package_data={"despero": ["comp_standard.npy"]},
     install_requires=[
         "numpy==1.26.4",
         "astropy==6.0.0",
