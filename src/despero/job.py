@@ -81,6 +81,8 @@ class Job:
                 reporter.set_status(name="flat", finished=False)
 
             store.create_master_flats()
+            if reporter:
+                reporter.set_master_flats(store.master_flats)
 
             if reporter:
                 reporter.set_status(name="flat", finished=True)
@@ -91,6 +93,7 @@ class Job:
 
         if reporter:
             reporter.set_status(name="orders", finished=True)
+            reporter.set_order_coordinates(store.order_coordinates)
 
         if self.flat:
             for master_flat in store.master_flats:
@@ -123,6 +126,9 @@ class Job:
             print(err)
             return
 
+        if reporter:
+            reporter.set_comp_standard(comp_standard)
+
         useful_comp_indexes = get_useful_comp_indexes(store)
         for comp_index, comp in enumerate(store.comp):
             if comp_index not in useful_comp_indexes:
@@ -130,6 +136,7 @@ class Job:
             calibrate_comp_spectra(comp, comp_standard)
 
         if reporter:
+            reporter.set_comp(store.comp)
             reporter.set_status(name="wavelength", finished=True)
 
         for observation in store.stellar:
@@ -172,6 +179,7 @@ class Job:
                 reporter.set_status(name="stitch", finished=True)
 
         if reporter:
+            reporter.set_stellar(store.stellar)
             reporter.set_status(name="save", finished=False)
 
         for observation in store.stellar:
