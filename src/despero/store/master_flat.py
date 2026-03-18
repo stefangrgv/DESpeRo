@@ -18,4 +18,5 @@ class MasterFlat:
 
     def normalize(self) -> None:
         normalized_data = self.raw_data.astype(np.float32) / np.max(self.raw_data)
-        self.normalized_data = normalized_data[normalized_data < 0.01] = 1  # discard dead pixels
+        normalized_data[normalized_data < 0.01] = 1  # discard dead pixels
+        self.normalized_data = normalized_data
