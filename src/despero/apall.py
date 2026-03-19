@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from scipy.signal import find_peaks
 
-from despero.parameters import (APERTURE_HEIGHT, CUTOFF, INTENSITY_THRESHOLD,
+from despero.parameters import (APERTURE_HEIGHT, CUTOFF,
                                 NUMBER_OF_ECHELLE_ORDERS)
 from despero.store.order import Order
 from despero.store.order_coordinates import OrderCoordinates
@@ -51,7 +51,7 @@ def _trace_direction(
         if pixel is None:
             # signal lost
             break
-        if pixel["intensity"] < INTENSITY_THRESHOLD and len(pixels) < 10:
+        if len(pixels) < 10:
             # tracing a cosmic
             return []
         pixels.append(pixel)
@@ -67,8 +67,6 @@ def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, fou
             "intensity": image[starting_row][starting_column],
         }
     ]
-    if pixels[0]["intensity"] < INTENSITY_THRESHOLD:
-        return []
 
     pixels = _trace_direction(image, starting_row, starting_column, "left", [])
     pixels = _trace_direction(image, starting_row, starting_column, "right", pixels)

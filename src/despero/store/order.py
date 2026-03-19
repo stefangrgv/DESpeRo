@@ -8,4 +8,4 @@ class Order:
         self.wavelength = []
         self.intensity = []
         self.normalized_intensity = []
-        self.identified_lines = [] # for comp only
+        self.identified_lines = []  # for comp only
