@@ -51,9 +51,6 @@ def _trace_direction(
         if pixel is None:
             # signal lost
             break
-        if len(pixels) < 10:
-            # tracing a cosmic
-            return []
         pixels.append(pixel)
         column, row = pixel["column"], pixel["row"]
     return pixels
