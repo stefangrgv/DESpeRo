@@ -44,6 +44,7 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
 
             except RuntimeError:  # gaussian fit did not converge: line not found
                 continue
+            comp_order.identified_lines = [[lines_column[i], lines_wavelength[i]] for i in range(len(lines_column))]
             cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
             comp_order.coordinates.coeff = cheby_fit.coef
             comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
