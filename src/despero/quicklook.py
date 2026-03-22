@@ -35,7 +35,6 @@ class Quicklook:
 
         store = Store(self.observation_dir)
         store.create_journal_for_quicklook(
-            observation_dir=self.observation_dir,
             flat_filename=self.flat_filename,
             comp_filename=self.comp_filename,
             stellar_filenames=self.stellar_filenames,
