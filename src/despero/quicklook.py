@@ -35,9 +35,10 @@ class Quicklook:
 
         store = Store(self.observation_dir)
         store.create_journal_for_quicklook(
-            flat=(Path(self.observation_dir) / self.flat_filename),
-            comp=(Path(self.observation_dir) / self.comp_filename),
-            stellar=[(Path(self.observation_dir) / s) for s in self.stellar_filenames],
+            observation_dir=self.observation_dir,
+            flat_filename=self.flat_filename,
+            comp_filename=self.comp_filename,
+            stellar_filenames=self.stellar_filenames,
         )
 
         if reporter:
@@ -111,6 +112,7 @@ class Quicklook:
             reporter.set_stellar(store.stellar)
             reporter.set_status(name="save", finished=False)
 
+        print(store.stellar[0].fits_file)
         for observation in store.stellar:
             save_as_2d_ascii(observation)
 
