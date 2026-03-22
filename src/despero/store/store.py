@@ -55,6 +55,42 @@ class Store:
             observation = Observation(self, fits_file, exposure_type, date, exposure_time, readtime, rdnoise)
             target_array.append(observation)
 
+    def create_journal_for_quicklook(self, flat: Path | str, comp: Path | str, stellar: Path | str) -> None:
+        date = datetime.strptime(datetime.now(), "%Y-%m-%dT%H:%M:%S")
+        self.flat.append(
+            Observation(
+                store=self,
+                fits_file=str(flat),
+                exposure_type=utils.EXPOSURE_TYPES.FLAT,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+        )
+        self.comp.append(
+            Observation(
+                store=self,
+                fits_file=str(comp),
+                exposure_type=utils.EXPOSURE_TYPES.COMP,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+        )
+        self.stellar.append(
+            Observation(
+                store=self,
+                fits_file=str(stellar),
+                exposure_type=utils.EXPOSURE_TYPES.STELLAR,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+        )
+
     def create_master_biases(self) -> None:
         for readtime in list(set([bias.readtime for bias in self.bias])):
             master_bias = MasterBias(self, readtime)
