@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from despero.apall import extract_2d_spectra, find_orders_coordinates
@@ -15,22 +16,16 @@ class Quicklook:
     def __init__(
         self,
         observation_dir: str,
-        cosmic: bool,
         flat: bool,
-        fits_2d: bool,
-        fits_2d_norm: bool,
-        ascii_2d: bool,
-        ascii_2d_norm: bool,
-        ascii_1d_norm: bool,
+        flat_filename: str,
+        comp_filename: str,
+        stellar_filenames: list[str],
     ):
         self.observation_dir = observation_dir
-        self.cosmic = cosmic
         self.flat = flat
-        self.fits_2d = fits_2d
-        self.fits_2d_norm = fits_2d_norm
-        self.ascii_2d = ascii_2d
-        self.ascii_2d_norm = ascii_2d_norm
-        self.ascii_1d_norm = ascii_1d_norm
+        self.flat_filename = flat_filename
+        self.comp_filename = comp_filename
+        self.stellar_filenames = stellar_filenames
 
     def start(self, reporter: Any | None = None, show_files_when_done: bool = False):
         # TODO: handle possibly missing dimension
@@ -39,18 +34,22 @@ class Quicklook:
             reporter.render_working_screen()
 
         store = Store(self.observation_dir)
-        store.load_journal_from_file()
+        store.create_journal_for_quicklook(
+            flat=(Path(self.observation_dir) / self.flat_filename),
+            comp=(Path(self.observation_dir) / self.comp_filename),
+            stellar=[(Path(self.observation_dir) / s) for s in self.stellar_filenames],
+        )
 
-        if self.flat:
-            if reporter:
-                reporter.set_status(name="flat", finished=False)
+        if reporter:
+            reporter.set_status(name="flat", finished=False)
 
-            store.create_master_flats()
-            if reporter:
-                reporter.set_master_flats(store.master_flats)
+        store.create_master_flats()
 
-            if reporter:
-                reporter.set_status(name="flat", finished=True)
+        if reporter:
+            reporter.set_master_flats(store.master_flats)
+
+        if reporter:
+            reporter.set_status(name="flat", finished=True)
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
@@ -108,47 +107,12 @@ class Quicklook:
             except Exception as exc:
                 print(f"Error: cannot perform wavelength calibration for {observation.fits_file}: {exc}")
 
-        if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
-            if reporter:
-                reporter.set_status(name="normalize", finished=False)
-
-            for observation in store.stellar:
-                try:
-                    normalize(observation)
-                except Exception as exc:
-                    print(f"Error: cannot normalize {observation.fits_file}: {exc}")
-
-            if reporter:
-                reporter.set_status(name="normalize", finished=True)
-
-        if self.ascii_1d_norm:
-            if reporter:
-                reporter.set_status(name="stitch", finished=False)
-
-            for observation in store.stellar:
-                try:
-                    stitch_oned(observation)
-                except Exception as exc:
-                    print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
-
-            if reporter:
-                reporter.set_status(name="stitch", finished=True)
-
         if reporter:
             reporter.set_stellar(store.stellar)
             reporter.set_status(name="save", finished=False)
 
         for observation in store.stellar:
-            if self.fits_2d:
-                save_as_fits(observation)
-            if self.fits_2d_norm:
-                save_as_fits(observation, normalized=True)
-            if self.ascii_2d:
-                save_as_2d_ascii(observation)
-            if self.ascii_2d_norm:
-                save_as_2d_ascii(observation, normalized=True)
-            if self.ascii_1d_norm:
-                save_as_1d_ascii_norm(observation)
+            save_as_2d_ascii(observation)
 
         if reporter:
             reporter.set_status(name="save", finished=True)
