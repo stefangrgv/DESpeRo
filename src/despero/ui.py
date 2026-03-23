@@ -201,6 +201,9 @@ class UI:
     def set_master_flats(self, master_flats):
         pass
 
+    def set_flats(self, flats):
+        pass
+
     def set_order_coordinates(self, order_coordinates):
         pass
 

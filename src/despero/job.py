@@ -86,6 +86,8 @@ class Job:
 
             if reporter:
                 reporter.set_status(name="flat", finished=True)
+        elif reporter:
+            reporter.set_flats(store.flat)
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
