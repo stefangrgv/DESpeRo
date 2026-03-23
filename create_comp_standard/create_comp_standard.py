@@ -8,6 +8,7 @@ from numpy.polynomial.chebyshev import chebfit, chebval
 
 from despero.fit import fit_line_with_gaussian, gaussian
 from despero.store.order_coordinates import OrderCoordinates
+from despero.utils import load_comp_standard
 
 LIVE_PLOT = True
 GAUSS_FIT_WINDOW = 20
@@ -89,7 +90,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
 
 
 def create_comp_standard() -> None:
-    comp_standard = np.load("raw_comp_standard.npy", allow_pickle=True).tolist()
+    comp_standard = load_comp_standard()
     for i in range(len(comp_standard.orders)):
         calibrate_order(comp_standard, i)
 
@@ -99,4 +100,4 @@ def create_comp_standard() -> None:
 if __name__ == "__main__":
     matplotlib.use("TkAgg")
     comp_standard = create_comp_standard()
-    np.save("../comp_standard.npy", comp_standard, allow_pickle=True)
+    np.save("new_comp_standard.npy", comp_standard, allow_pickle=True)
