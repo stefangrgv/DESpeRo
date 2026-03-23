@@ -24,7 +24,10 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
             else:
                 flux_array = observation.orders[i].intensity
             wavelength = observation.orders[i].wavelength
-            cheb_coefs = observation.orders[i].coordinates.coeff.tolist()
+            if isinstance(observation.orders[i].coordinates.coeff, list):
+                cheb_coefs = observation.orders[i].coordinates.coeff
+            else:
+                cheb_coefs = observation.orders[i].coordinates.coeff.tolist()
 
             hdu = fits.PrimaryHDU(data=flux_array)
             hdr = hdu.header

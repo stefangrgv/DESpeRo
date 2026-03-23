@@ -1,4 +1,4 @@
 APERTURE_HEIGHT = 6  # actual window is 2*(APERTURE_HEIGHT - 1) - 1
 NUMBER_OF_ECHELLE_ORDERS = 67
 CUTOFF = 20
-FIT_WINDOW_HW = 10  # half-width in px
+FIT_WINDOW_HW = 30  # half-width in px

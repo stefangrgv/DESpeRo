@@ -52,7 +52,7 @@ class Store:
             elif _exposure_type[i] == "comp":
                 exposure_type = utils.EXPOSURE_TYPES.COMP
                 target_array = self.comp
-            observation = Observation(self, fits_file, exposure_type, date, exposure_time, readtime, rdnoise)
+            observation = Observation(self, Path(fits_file), exposure_type, date, exposure_time, readtime, rdnoise)
             target_array.append(observation)
 
     def create_journal_for_quicklook(
@@ -62,7 +62,7 @@ class Store:
         self.flat.append(
             Observation(
                 store=self,
-                fits_file=str(flat_filename),
+                fits_file=Path(flat_filename),
                 exposure_type=utils.EXPOSURE_TYPES.FLAT,
                 date=date,
                 exposure_time=0,
@@ -73,7 +73,7 @@ class Store:
         self.comp.append(
             Observation(
                 store=self,
-                fits_file=str(comp_filename),
+                fits_file=Path(comp_filename),
                 exposure_type=utils.EXPOSURE_TYPES.COMP,
                 date=date,
                 exposure_time=0,
@@ -84,7 +84,7 @@ class Store:
         self.stellar = [
             Observation(
                 store=self,
-                fits_file=str(stellar_filename),
+                fits_file=Path(stellar_filename),
                 exposure_type=utils.EXPOSURE_TYPES.STELLAR,
                 date=date,
                 exposure_time=0,
