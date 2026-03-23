@@ -1,5 +1,7 @@
 from typing import Any
 
+import numpy as np
+
 from despero.utils import EXPOSURE_TYPES, load_fits
 
 
@@ -36,3 +38,8 @@ class Observation:
                 self.ra = header["RA"]
                 self.dec = header["DEC"]
                 self.jd = header["JD-OBS"]
+
+    def normalize(self) -> None:
+        normalized_data = self.raw_data.astype(np.float32) / np.max(self.raw_data)
+        normalized_data[normalized_data < 0.01] = 1  # discard dead pixels
+        self.normalized_data = normalized_data

@@ -87,6 +87,8 @@ class Job:
             if reporter:
                 reporter.set_status(name="flat", finished=True)
         elif reporter:
+            for i in range(len(store.flat)):
+                store.flat[i].normalize()
             reporter.set_flats(store.flat)
 
         if reporter:
