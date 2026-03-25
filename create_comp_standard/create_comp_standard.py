@@ -84,7 +84,7 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
                 line_columns.append(line[0])
                 line_wavelengths.append(line[1])
         order.coordinates.lines = [(line_columns[i], line_wavelengths[i]) for i in range(len(line_columns))]
-        if order_number in [1, 61, 62]:
+        if order_number in [1, 61, 62, 63]:
             order.coordinates.coeff = chebfit(line_columns, line_wavelengths, deg=1)
         else:
             order.coordinates.coeff = chebfit(line_columns, line_wavelengths, deg=3)
