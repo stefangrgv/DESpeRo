@@ -139,6 +139,9 @@ class Job:
                 continue
             calibrate_comp_spectra(comp, comp_standard)
 
+        for comp in store.comp:
+            comp.sort_orders()
+
         if reporter:
             reporter.set_comp(store.comp)
             reporter.set_status(name="wavelength", finished=True)
@@ -181,6 +184,9 @@ class Job:
 
             if reporter:
                 reporter.set_status(name="stitch", finished=True)
+
+        for stellar in store.stellar:
+            stellar.sort_orders()
 
         if reporter:
             reporter.set_stellar(store.stellar)

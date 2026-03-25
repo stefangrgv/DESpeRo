@@ -43,3 +43,6 @@ class Observation:
         normalized_data = self.raw_data.astype(np.float32) / np.max(self.raw_data)
         normalized_data[normalized_data < 0.01] = 1  # discard dead pixels
         self.normalized_data = normalized_data
+
+    def sort_orders(self) -> None:
+        self.orders = [order for order in reversed(self.orders) if len(order.wavelength)]
