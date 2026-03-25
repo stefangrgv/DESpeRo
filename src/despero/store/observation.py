@@ -45,4 +45,4 @@ class Observation:
         self.normalized_data = normalized_data
 
     def sort_orders(self) -> None:
-        self.orders = [order for order in reversed(self.orders) if len(order.wavelength)]
+        self.orders = [order for order in reversed(self.orders)]
