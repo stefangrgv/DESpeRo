@@ -98,7 +98,6 @@ class Quicklook:
             calibrate_comp_spectra(comp, comp_standard)
 
         if reporter:
-            reporter.set_comp(store.comp)
             reporter.set_status(name="wavelength", finished=True)
 
         for observation in store.stellar:
@@ -106,6 +105,15 @@ class Quicklook:
                 calibrate_stellar(observation)
             except Exception as exc:
                 print(f"Error: cannot perform wavelength calibration for {observation.fits_file}: {exc}")
+
+        for comp in store.comp:
+            comp.sort_orders()
+
+        if reporter:
+            reporter.set_comp(store.comp)
+
+        for stellar in store.stellar:
+            stellar.sort_orders()
 
         if reporter:
             reporter.set_stellar(store.stellar)
