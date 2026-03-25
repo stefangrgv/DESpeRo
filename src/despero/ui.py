@@ -5,12 +5,13 @@ from tkinter import BooleanVar, StringVar, messagebox
 from tkinter.filedialog import askdirectory
 
 from despero.job import Job
+from despero.reporter import ReporterBase
 
 NO_DIR_STRING = "No selected directory"
 BACKGROUND_COLORS = {"MAIN": "#ebebeb", "BUTTON": "#e0e0e0"}
 
 
-class UI:
+class UI(ReporterBase):
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("DESpeRo")
@@ -197,24 +198,6 @@ class UI:
         self.status_frame.pack(anchor="w", fill="x", pady=10)
 
         self._init_steps_labels()
-
-    def set_master_flats(self, master_flats):
-        pass
-
-    def set_flats(self, flats):
-        pass
-
-    def set_order_coordinates(self, order_coordinates):
-        pass
-
-    def set_comp_standard(self, comp_standard):
-        pass
-
-    def set_comp(self, comp):
-        pass
-
-    def set_stellar(self, stellar):
-        pass
 
     def _create_status_label(self, text: str):
         return tk.Label(

@@ -53,7 +53,8 @@ class Job:
                 try:
                     clean_cosmics(observation)
                 except Exception as exc:
-                    print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
+                    if reporter:
+                        reporter.warning(f"Cannot clean cosmics from {observation.fits_file}: {exc}")
             if reporter:
                 reporter.set_status(name="cosmics", finished=True)
 
@@ -72,7 +73,9 @@ class Job:
                     try:
                         correct_for_bias(observation, master_bias)
                     except Exception as exc:
-                        print(f"Error: cannot apply bias correction to {observation.fits_file}: {exc}")
+                        if reporter:
+                            reporter.warning(f"Cannot apply bias correction to {observation.fits_file}: {exc}")
+
             if reporter:
                 reporter.set_status(name="bias", finished=True)
 
@@ -107,7 +110,9 @@ class Job:
                     try:
                         correct_for_flat(observation, master_flat)
                     except Exception as exc:
-                        print(f"Error: cannot apply flat correction to {observation.fits_file}: {exc}")
+                        if reporter:
+                            reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+
         get_comp_for_stellar(store)
 
         if reporter:
@@ -117,7 +122,8 @@ class Job:
             try:
                 extract_2d_spectra(observation)
             except Exception as exc:
-                print(f"Error: cannot extract 2D spectrum from {observation.fits_file}: {exc}")
+                if reporter:
+                    reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
 
         if reporter:
             reporter.set_status(name="spectra", finished=True)
@@ -125,10 +131,9 @@ class Job:
 
         try:
             comp_standard = load_comp_standard()
-        except FileNotFoundError as err:
-            print("Error: comp standard not found!")
-            print(err)
-            return
+        except FileNotFoundError as exc:
+            if reporter:
+                reporter.warning("Fatal error: comp standard not found!")
 
         if reporter:
             reporter.set_comp_standard(comp_standard)
@@ -146,7 +151,8 @@ class Job:
             try:
                 calibrate_stellar(observation)
             except Exception as exc:
-                print(f"Error: cannot perform wavelength calibration for {observation.fits_file}: {exc}")
+                if reporter:
+                    reporter.warning(f"Cannot perform wavelength calibration for {observation.fits_file}: {exc}")
 
         for comp in store.comp:
             comp.sort_orders()
@@ -159,7 +165,8 @@ class Job:
                 try:
                     correct_vhelio(observation)
                 except Exception as exc:
-                    print(f"Error: cannot perform VHELIO correction for {observation.fits_file}: {exc}")
+                    if reporter:
+                        reporter.warning(f"Cannot perform VHELIO correction for {observation.fits_file}: {exc}")
 
         if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
             if reporter:
@@ -169,7 +176,8 @@ class Job:
                 try:
                     normalize(observation)
                 except Exception as exc:
-                    print(f"Error: cannot normalize {observation.fits_file}: {exc}")
+                    if reporter:
+                        reporter.warning(f"Cannot normalize {observation.fits_file}: {exc}")
 
             if reporter:
                 reporter.set_status(name="normalize", finished=True)
@@ -182,7 +190,8 @@ class Job:
                 try:
                     stitch_oned(observation)
                 except Exception as exc:
-                    print(f"Error: cannot create 1D spectrum for {observation.fits_file}: {exc}")
+                    if reporter:
+                        reporter.warning(f"Cannot create 1D spectrum for {observation.fits_file}: {exc}")
 
             if reporter:
                 reporter.set_status(name="stitch", finished=True)

@@ -65,7 +65,9 @@ class Quicklook:
                     try:
                         correct_for_flat(observation, master_flat)
                     except Exception as exc:
-                        print(f"Error: cannot apply flat correction to {observation.fits_file}: {exc}")
+                        if reporter:
+                            reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+
         get_comp_for_stellar(store)
 
         if reporter:
@@ -75,7 +77,8 @@ class Quicklook:
             try:
                 extract_2d_spectra(observation)
             except Exception as exc:
-                print(f"Error: cannot extract 2D spectrum from {observation.fits_file}: {exc}")
+                if reporter:
+                    reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
 
         if reporter:
             reporter.set_status(name="spectra", finished=True)
@@ -83,10 +86,9 @@ class Quicklook:
 
         try:
             comp_standard = load_comp_standard()
-        except FileNotFoundError as err:
-            print("Error: comp standard not found!")
-            print(err)
-            return
+        except FileNotFoundError as exc:
+            if reporter:
+                reporter.warning("Fatal error: comp standard not found!")
 
         if reporter:
             reporter.set_comp_standard(comp_standard)
@@ -104,7 +106,8 @@ class Quicklook:
             try:
                 calibrate_stellar(observation)
             except Exception as exc:
-                print(f"Error: cannot perform wavelength calibration for {observation.fits_file}: {exc}")
+                if reporter:
+                    reporter.warning(f"Cannot perform wavelength calibration for {observation.fits_file}: {exc}")
 
         for comp in store.comp:
             comp.sort_orders()
@@ -119,7 +122,6 @@ class Quicklook:
             reporter.set_stellar(store.stellar)
             reporter.set_status(name="save", finished=False)
 
-        print(store.stellar[0].fits_file)
         for observation in store.stellar:
             save_as_2d_ascii(observation)
 
