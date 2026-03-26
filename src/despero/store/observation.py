@@ -35,9 +35,13 @@ class Observation:
             self.raw_data = raw_data
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
-                self.ra = header["RA"]
-                self.dec = header["DEC"]
-                self.jd = header["JD-OBS"]
+                try:
+                    self.ra = header["RA"]
+                    self.dec = header["DEC"]
+                    self.jd = header["JD-OBS"]
+                except KeyError as exc:
+                    if self.store.reporter:
+                        self.store.reporter.warning(str(exc))
 
     def normalize(self) -> None:
         normalized_data = self.raw_data.astype(np.float32) / np.max(self.raw_data)

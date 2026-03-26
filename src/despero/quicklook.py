@@ -15,7 +15,7 @@ from despero.utils import load_comp_standard, open_directory
 class Quicklook:
     def __init__(
         self,
-        observation_dir: str,
+        observation_dir: Path | str,
         flat: bool,
         flat_filename: str,
         comp_filename: str,
@@ -33,7 +33,10 @@ class Quicklook:
         if reporter:
             reporter.render_working_screen()
 
-        store = Store(self.observation_dir)
+        store = Store(directory=self.observation_dir)
+        if reporter:
+            store.reporter = reporter
+
         store.create_journal_for_quicklook(
             flat_filename=self.flat_filename,
             comp_filename=self.comp_filename,

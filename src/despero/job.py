@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from despero.apall import extract_2d_spectra, find_orders_coordinates
@@ -16,7 +17,7 @@ from despero.vhelio import correct_vhelio
 class Job:
     def __init__(
         self,
-        observation_dir: str,
+        observation_dir: Path | str,
         cosmic: bool,
         bias: bool,
         flat: bool,
@@ -42,7 +43,10 @@ class Job:
         if reporter:
             reporter.render_working_screen()
 
-        store = Store(self.observation_dir)
+        store = Store(directory=self.observation_dir)
+        if reporter:
+            store.reporter = reporter
+
         store.load_journal_from_file()
 
         if self.cosmic:
