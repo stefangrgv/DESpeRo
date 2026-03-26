@@ -135,7 +135,7 @@ class Job:
 
         try:
             comp_standard = load_comp_standard()
-        except FileNotFoundError as exc:
+        except FileNotFoundError:
             if reporter:
                 reporter.warning("Fatal error: comp standard not found!")
 

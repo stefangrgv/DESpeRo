@@ -5,14 +5,12 @@ from despero.apall import extract_2d_spectra, find_orders_coordinates
 from despero.calibrate import (calibrate_comp_spectra, calibrate_stellar,
                                get_comp_for_stellar, get_useful_comp_indexes)
 from despero.initial_corrections import correct_for_flat
-from despero.normalize import normalize, stitch_oned
-from despero.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
-from despero.save.as_fits import save_as_fits
+from despero.save.as_ascii import save_as_2d_ascii
 from despero.store.store import Store
 from despero.utils import load_comp_standard, open_directory
 
 
-class Quicklook:
+class InspectJob:
     def __init__(
         self,
         observation_dir: Path | str,
@@ -37,7 +35,7 @@ class Quicklook:
         if reporter:
             store.reporter = reporter
 
-        store.create_journal_for_quicklook(
+        store.create_journal_for_inspect_job(
             flat_filename=self.flat_filename,
             comp_filename=self.comp_filename,
             stellar_filenames=self.stellar_filenames,
@@ -89,7 +87,7 @@ class Quicklook:
 
         try:
             comp_standard = load_comp_standard()
-        except FileNotFoundError as exc:
+        except FileNotFoundError:
             if reporter:
                 reporter.warning("Fatal error: comp standard not found!")
 

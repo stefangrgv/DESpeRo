@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -57,7 +56,7 @@ class Store:
             observation = Observation(self, Path(fits_file), exposure_type, date, exposure_time, readtime, rdnoise)
             target_array.append(observation)
 
-    def create_journal_for_quicklook(
+    def create_journal_for_inspect_job(
         self, flat_filename: Path | str, comp_filename: Path | str, stellar_filenames: list[Path | str]
     ) -> None:
         date = datetime.now()
