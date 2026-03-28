@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from pathlib import Path
 
@@ -26,8 +25,10 @@ class Store:
         self.master_biases = []
         self.master_flats = []
 
+        self.reporter = None
+
     def load_journal_from_file(self) -> None:
-        journal_path = os.path.join(self.directory, "Journal.txt")
+        journal_path = self.directory / "Journal.txt"
         try:
             _fits, _dates, _exp, _exposure_type = np.loadtxt(journal_path, dtype="str", unpack=True)
         except FileNotFoundError:
@@ -36,7 +37,7 @@ class Store:
 
             sys.exit(1)
         for i in range(len(_fits)):
-            fits_file = os.path.join(self.directory, f"{_fits[i]}.fits")
+            fits_file = self.directory / f"{_fits[i]}.fits"
             date = datetime.strptime(_dates[i], "%Y-%m-%dT%H:%M:%S")
             exposure_time = float(_exp[i])
             (readtime, rdnoise) = utils.get_readtime_and_readnoise(fits_file)
@@ -52,8 +53,47 @@ class Store:
             elif _exposure_type[i] == "comp":
                 exposure_type = utils.EXPOSURE_TYPES.COMP
                 target_array = self.comp
-            observation = Observation(self, fits_file, exposure_type, date, exposure_time, readtime, rdnoise)
+            observation = Observation(self, Path(fits_file), exposure_type, date, exposure_time, readtime, rdnoise)
             target_array.append(observation)
+
+    def create_journal_for_inspect_job(
+        self, flat_filename: Path | str, comp_filename: Path | str, stellar_filenames: list[Path | str]
+    ) -> None:
+        date = datetime.now()
+        self.flat.append(
+            Observation(
+                store=self,
+                fits_file=(self.directory / flat_filename),
+                exposure_type=utils.EXPOSURE_TYPES.FLAT,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+        )
+        self.comp.append(
+            Observation(
+                store=self,
+                fits_file=(self.directory / comp_filename),
+                exposure_type=utils.EXPOSURE_TYPES.COMP,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+        )
+        self.stellar = [
+            Observation(
+                store=self,
+                fits_file=(self.directory / stellar_filename),
+                exposure_type=utils.EXPOSURE_TYPES.STELLAR,
+                date=date,
+                exposure_time=0,
+                readtime=0,
+                rdnoise=0,
+            )
+            for stellar_filename in stellar_filenames
+        ]
 
     def create_master_biases(self) -> None:
         for readtime in list(set([bias.readtime for bias in self.bias])):

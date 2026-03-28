@@ -1,5 +1,7 @@
 from typing import Any
 
+import numpy as np
+
 from despero.utils import EXPOSURE_TYPES, load_fits
 
 
@@ -33,6 +35,18 @@ class Observation:
             self.raw_data = raw_data
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
-                self.ra = header["RA"]
-                self.dec = header["DEC"]
-                self.jd = header["JD-OBS"]
+                try:
+                    self.ra = header["RA"]
+                    self.dec = header["DEC"]
+                    self.jd = header["JD-OBS"]
+                except KeyError as exc:
+                    if self.store.reporter:
+                        self.store.reporter.warning(str(exc))
+
+    def normalize(self) -> None:
+        normalized_data = self.raw_data.astype(np.float32) / np.max(self.raw_data)
+        normalized_data[normalized_data < 0.01] = 1  # discard dead pixels
+        self.normalized_data = normalized_data
+
+    def sort_orders(self) -> None:
+        self.orders = [order for order in reversed(self.orders)]

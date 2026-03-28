@@ -1,11 +1,13 @@
-from typing import Any
+from typing import Any, List
 
+import numpy as np
 from astropy import units as u
 from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.time import Time
 
 
-def _remove_doppler_shift(wl: float, rv: float) -> float:
+def _remove_doppler_shift(wl: List[float], rv: float) -> float:
+    wl = np.asarray(wl)
     return wl + wl * (rv / 299792.458)
 
 
