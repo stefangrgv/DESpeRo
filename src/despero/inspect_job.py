@@ -26,8 +26,6 @@ class InspectJob:
         self.stellar_filenames = stellar_filenames
 
     def start(self, reporter: Any | None = None, show_files_when_done: bool = False):
-        # TODO: handle possibly missing dimension
-
         if reporter:
             reporter.render_working_screen()
 
@@ -72,11 +70,14 @@ class InspectJob:
         get_comp_for_stellar(store)
 
         if reporter:
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_status(name="spectra", finished=False)
 
         for observation in store.stellar:
             try:
+                reporter.set_files_progress(file=observation)
                 extract_2d_spectra(observation)
+                reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
@@ -101,11 +102,14 @@ class InspectJob:
             calibrate_comp_spectra(comp, comp_standard)
 
         if reporter:
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_status(name="wavelength", finished=True)
 
         for observation in store.stellar:
             try:
+                reporter.set_files_progress(file=observation)
                 calibrate_stellar(observation)
+                reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot perform wavelength calibration for {observation.fits_file}: {exc}")
@@ -120,11 +124,14 @@ class InspectJob:
             stellar.sort_orders()
 
         if reporter:
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_stellar(store.stellar)
             reporter.set_status(name="save", finished=False)
 
         for observation in store.stellar:
+            reporter.set_files_progress(file=observation)
             save_as_2d_ascii(observation)
+            reporter.set_files_progress(file=observation, done=True)
 
         if reporter:
             reporter.set_status(name="save", finished=True)

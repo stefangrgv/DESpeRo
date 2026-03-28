@@ -51,11 +51,14 @@ class Job:
 
         if self.cosmic:
             if reporter:
+                reporter.set_files_progress(all=store.stellar)
                 reporter.set_status(name="cosmics", finished=False)
 
             for observation in store.stellar:
                 try:
+                    reporter.set_files_progress(file=observation)
                     clean_cosmics(observation)
+                    reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot clean cosmics from {observation.fits_file}: {exc}")
@@ -120,11 +123,14 @@ class Job:
         get_comp_for_stellar(store)
 
         if reporter:
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_status(name="spectra", finished=False)
 
         for observation in store.stellar:
             try:
+                reporter.set_files_progress(file=observation)
                 extract_2d_spectra(observation)
+                reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
@@ -149,11 +155,14 @@ class Job:
             calibrate_comp_spectra(comp, comp_standard)
 
         if reporter:
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_status(name="wavelength", finished=True)
 
         for observation in store.stellar:
             try:
+                reporter.set_files_progress(file=observation)
                 calibrate_stellar(observation)
+                reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot perform wavelength calibration for {observation.fits_file}: {exc}")
@@ -174,11 +183,14 @@ class Job:
 
         if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
             if reporter:
+                reporter.set_files_progress(all=store.stellar)
                 reporter.set_status(name="normalize", finished=False)
 
             for observation in store.stellar:
                 try:
+                    reporter.set_files_progress(file=observation)
                     normalize(observation)
+                    reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot normalize {observation.fits_file}: {exc}")
@@ -188,11 +200,14 @@ class Job:
 
         if self.ascii_1d_norm:
             if reporter:
+                reporter.set_files_progress(all=store.stellar)
                 reporter.set_status(name="stitch", finished=False)
 
             for observation in store.stellar:
                 try:
+                    reporter.set_files_progress(file=observation)
                     stitch_oned(observation)
+                    reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot create 1D spectrum for {observation.fits_file}: {exc}")
@@ -205,9 +220,11 @@ class Job:
 
         if reporter:
             reporter.set_stellar(store.stellar)
+            reporter.set_files_progress(all=store.stellar)
             reporter.set_status(name="save", finished=False)
 
         for observation in store.stellar:
+            reporter.set_files_progress(file=observation)
             if self.fits_2d:
                 save_as_fits(observation)
             if self.fits_2d_norm:
@@ -218,6 +235,7 @@ class Job:
                 save_as_2d_ascii(observation, normalized=True)
             if self.ascii_1d_norm:
                 save_as_1d_ascii_norm(observation)
+            reporter.set_files_progress(file=observation, done=True)
 
         if reporter:
             reporter.set_status(name="save", finished=True)

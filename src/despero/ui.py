@@ -1,6 +1,7 @@
 import os
 import threading
 import tkinter as tk
+from pathlib import Path
 from tkinter import BooleanVar, StringVar, messagebox
 from tkinter.filedialog import askdirectory
 
@@ -309,7 +310,7 @@ class UI(ReporterBase):
 
     def _go(self) -> None:
         job = Job(
-            observation_dir=self.observations_dir.get(),
+            observation_dir=Path(self.observations_dir.get()),
             cosmic=self.cosmic.get(),
             bias=self.bias.get(),
             flat=self.flat.get(),
