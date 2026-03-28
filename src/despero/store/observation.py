@@ -1,4 +1,5 @@
 from typing import Any
+from pathlib import Path
 
 import numpy as np
 
@@ -9,7 +10,7 @@ class Observation:
     def __init__(
         self,
         store: Any,
-        fits_file: str,
+        fits_file: Path,
         exposure_type: Any,
         date: Any,
         exposure_time: float | int,

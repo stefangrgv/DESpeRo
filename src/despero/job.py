@@ -51,8 +51,8 @@ class Job:
 
         if self.cosmic:
             if reporter:
-                reporter.set_status(name="cosmics", finished=False)
                 reporter.set_files_progress(all=store.stellar)
+                reporter.set_status(name="cosmics", finished=False)
 
             for observation in store.stellar:
                 try:
@@ -123,8 +123,8 @@ class Job:
         get_comp_for_stellar(store)
 
         if reporter:
-            reporter.set_status(name="spectra", finished=False)
             reporter.set_files_progress(all=store.stellar)
+            reporter.set_status(name="spectra", finished=False)
 
         for observation in store.stellar:
             try:
@@ -155,8 +155,8 @@ class Job:
             calibrate_comp_spectra(comp, comp_standard)
 
         if reporter:
-            reporter.set_status(name="wavelength", finished=True)
             reporter.set_files_progress(all=store.stellar)
+            reporter.set_status(name="wavelength", finished=True)
 
         for observation in store.stellar:
             try:
@@ -183,8 +183,8 @@ class Job:
 
         if self.fits_2d_norm or self.ascii_2d_norm or self.ascii_1d_norm:
             if reporter:
-                reporter.set_status(name="normalize", finished=False)
                 reporter.set_files_progress(all=store.stellar)
+                reporter.set_status(name="normalize", finished=False)
 
             for observation in store.stellar:
                 try:
@@ -200,8 +200,8 @@ class Job:
 
         if self.ascii_1d_norm:
             if reporter:
-                reporter.set_status(name="stitch", finished=False)
                 reporter.set_files_progress(all=store.stellar)
+                reporter.set_status(name="stitch", finished=False)
 
             for observation in store.stellar:
                 try:
@@ -220,8 +220,8 @@ class Job:
 
         if reporter:
             reporter.set_stellar(store.stellar)
-            reporter.set_status(name="save", finished=False)
             reporter.set_files_progress(all=store.stellar)
+            reporter.set_status(name="save", finished=False)
 
         for observation in store.stellar:
             reporter.set_files_progress(file=observation)

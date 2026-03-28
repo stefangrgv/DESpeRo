@@ -1,6 +1,6 @@
-from store.master_flat import MasterFlat
-from store.observation import Observation
-from store.order_coordinates import OrderCoordinates
+from despero.store.master_flat import MasterFlat
+from despero.store.observation import Observation
+from despero.store.order_coordinates import OrderCoordinates
 
 
 class ReporterBase:
