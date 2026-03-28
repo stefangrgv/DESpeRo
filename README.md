@@ -21,7 +21,7 @@
 
 1. Make sure the virtual environment is active
 2. Start the program by running
-`python despero.py`
+`python run.py`
 
 
 ## Feedback
