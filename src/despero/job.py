@@ -13,7 +13,6 @@ from despero.store.store import Store
 from despero.utils import load_comp_standard, open_directory
 from despero.vhelio import correct_vhelio
 
-
 class Job:
     def __init__(
         self,
@@ -86,31 +85,27 @@ class Job:
             if reporter:
                 reporter.set_status(name="bias", finished=True)
 
-        if self.flat:
-            if reporter:
-                reporter.set_status(name="flat", finished=False)
+        # create master flat even if flat correction not requested
+        # to better extract the order coordinates
+        store.create_master_flats()
 
-            store.create_master_flats()
-            if reporter:
-                reporter.set_master_flats(store.master_flats)
-
-            if reporter:
-                reporter.set_status(name="flat", finished=True)
-        elif reporter:
-            for i in range(len(store.flat)):
-                store.flat[i].normalize()
+        if reporter:
+            reporter.set_master_flats(store.master_flats)
             reporter.set_flats(store.flat)
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
-        find_orders_coordinates(store, use_master_flat=self.flat)
+        find_orders_coordinates(store)
 
         if reporter:
             reporter.set_status(name="orders", finished=True)
             reporter.set_order_coordinates(store.order_coordinates)
 
         if self.flat:
+            if reporter:
+                reporter.set_status(name="flat", finished=False)
             for master_flat in store.master_flats:
+                master_flat.normalize()
                 for observation in [
                     observation for observation in store.stellar if observation.readtime == master_flat.readtime
                 ]:
@@ -119,6 +114,8 @@ class Job:
                     except Exception as exc:
                         if reporter:
                             reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+            if reporter:
+                reporter.set_status(name="flat", finished=True)
 
         get_comp_for_stellar(store)
 
