@@ -225,6 +225,12 @@ class UI(ReporterBase):
                     "label": self._create_status_label("Correct for bias"),
                 }
             )
+        self.steps_labels.append(
+            {
+                "name": "orders",
+                "label": self._create_status_label("Trace echelle orders"),
+            }
+        )
         if self.flat.get():
             self.steps_labels.append(
                 {
@@ -232,12 +238,6 @@ class UI(ReporterBase):
                     "label": self._create_status_label("Correct for flat"),
                 }
             )
-        self.steps_labels.append(
-            {
-                "name": "orders",
-                "label": self._create_status_label("Trace echelle orders"),
-            }
-        )
         self.steps_labels.append(
             {
                 "name": "spectra",
@@ -281,7 +281,7 @@ class UI(ReporterBase):
             self.start_button.config(state=tk.DISABLED)
 
     def _select_directory(self) -> None:
-        observations_dir = askdirectory()
+        observations_dir = askdirectory(initialdir="/home/stefan/science/ESPERO/data/20250603")
         if not observations_dir:
             return
         if "Journal.txt" in os.listdir(observations_dir):

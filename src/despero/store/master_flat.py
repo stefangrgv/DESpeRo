@@ -1,9 +1,10 @@
 from typing import Any
 
-from scipy import stats
 import numpy as np
 from astropy.io import fits
+
 from despero.parameters import APERTURE_HEIGHT
+
 
 class MasterFlat:
     def __init__(self, store: Any, readtime: float | int):
@@ -30,6 +31,5 @@ class MasterFlat:
                         mask[row + j][column] = self.raw_data[row + j][column]
                     if row - j >= 0:
                         mask[row - j][column] = self.raw_data[row - j][column]
-        normalized_data = mask / np.nanmedian(mask)
-        normalized_data[normalized_data < 0.01] = 1  # discard pixels with no signal
-        self.normalized_data = normalized_data
+        median = np.nanmedian(mask, axis=0)
+        self.normalized_data = mask / median

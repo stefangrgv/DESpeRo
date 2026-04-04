@@ -52,7 +52,7 @@ def stitch_oned(stellar: Any) -> None:
                     wavelength = [*[wavelength[i] for i in keep_ind], *list(order.wavelength)]
                     intensity = [*[intensity[i] for i in keep_ind], *list(order.intensity)]
                     n_intensity = [*[n_intensity[i] for i in keep_ind], *list(order.normalized_intensity)]
-        except IndexError as exc:
+        except IndexError:
             # current order has no wavelength solution, skip it
             continue
 
