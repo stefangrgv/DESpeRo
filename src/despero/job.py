@@ -91,10 +91,6 @@ class Job:
         store.create_master_flats()
 
         if reporter:
-            reporter.set_master_flats(store.master_flats)
-            reporter.set_flats(store.flat)
-
-        if reporter:
             reporter.set_status(name="orders", finished=False)
         find_orders_coordinates(store)
 
@@ -116,6 +112,7 @@ class Job:
                         if reporter:
                             reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
             if reporter:
+                reporter.set_master_flats(store.master_flats)
                 reporter.set_status(name="flat", finished=True)
 
         get_comp_for_stellar(store)

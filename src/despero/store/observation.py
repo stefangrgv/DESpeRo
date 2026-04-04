@@ -33,7 +33,7 @@ class Observation:
 
         if load:
             header, raw_data = load_fits(self.fits_file)
-            self.raw_data = raw_data
+            self.raw_data = raw_data.astype(np.float32)
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
                 try:

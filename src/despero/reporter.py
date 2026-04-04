@@ -13,9 +13,6 @@ class ReporterBase:
     def set_master_flats(self, master_flats: list[MasterFlat]):
         pass
 
-    def set_flats(self, flats: list[Observation]):
-        pass
-
     def set_order_coordinates(self, order_coordinates: list[OrderCoordinates]):
         pass
 
