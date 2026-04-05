@@ -48,7 +48,7 @@ class InspectJob:
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
-        find_orders_coordinates(store, use_master_flat=self.flat)
+        find_orders_coordinates(store)
 
         if reporter:
             reporter.set_status(name="orders", finished=True)
@@ -57,13 +57,18 @@ class InspectJob:
         if self.flat:
             if reporter:
                 reporter.set_status(name="flat", finished=False)
+
             for master_flat in store.master_flats:
-                for observation in [observation for observation in store.stellar]:
-                    try:
-                        correct_for_flat(observation, master_flat)
-                    except Exception as exc:
-                        if reporter:
-                            reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+                master_flat.normalize()
+
+            for observation in [
+                observation for observation in store.stellar if observation.readtime == master_flat.readtime
+            ]:
+                try:
+                    correct_for_flat(observation, master_flat)
+                except Exception as exc:
+                    if reporter:
+                        reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
             if reporter:
                 reporter.set_status(name="flat", finished=True)
 

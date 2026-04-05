@@ -103,14 +103,15 @@ class Job:
                 reporter.set_status(name="flat", finished=False)
             for master_flat in store.master_flats:
                 master_flat.normalize()
-                for observation in [
-                    observation for observation in store.stellar if observation.readtime == master_flat.readtime
-                ]:
-                    try:
-                        correct_for_flat(observation, master_flat)
-                    except Exception as exc:
-                        if reporter:
-                            reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+
+            for observation in [
+                observation for observation in store.stellar if observation.readtime == master_flat.readtime
+            ]:
+                try:
+                    correct_for_flat(observation, master_flat)
+                except Exception as exc:
+                    if reporter:
+                        reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
             if reporter:
                 reporter.set_master_flats(store.master_flats)
                 reporter.set_status(name="flat", finished=True)
