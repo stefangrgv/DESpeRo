@@ -116,5 +116,4 @@ class Store:
                 target_data = master_flat.raw_data.astype(np.int64)
                 target_data -= corresponding_master_bias.raw_data
                 master_flat.raw_data = np.clip(target_data, 0, 2**16).astype(np.uint16)
-            master_flat.normalize()
             self.master_flats.append(master_flat)

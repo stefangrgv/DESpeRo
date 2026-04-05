@@ -39,33 +39,38 @@ class InspectJob:
             stellar_filenames=self.stellar_filenames,
         )
 
-        if reporter:
-            reporter.set_status(name="flat", finished=False)
-
+        # create master flat even if flat correction not requested:
+        # this is done to better extract the order coordinates
         store.create_master_flats()
 
         if reporter:
             reporter.set_master_flats(store.master_flats)
 
         if reporter:
-            reporter.set_status(name="flat", finished=True)
-
-        if reporter:
             reporter.set_status(name="orders", finished=False)
-        find_orders_coordinates(store, use_master_flat=self.flat)
+        find_orders_coordinates(store)
 
         if reporter:
             reporter.set_status(name="orders", finished=True)
             reporter.set_order_coordinates(store.order_coordinates)
 
         if self.flat:
+            if reporter:
+                reporter.set_status(name="flat", finished=False)
+
             for master_flat in store.master_flats:
-                for observation in [observation for observation in store.stellar]:
-                    try:
-                        correct_for_flat(observation, master_flat)
-                    except Exception as exc:
-                        if reporter:
-                            reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+                master_flat.normalize()
+
+            for observation in [
+                observation for observation in store.stellar if observation.readtime == master_flat.readtime
+            ]:
+                try:
+                    correct_for_flat(observation, master_flat)
+                except Exception as exc:
+                    if reporter:
+                        reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
+            if reporter:
+                reporter.set_status(name="flat", finished=True)
 
         get_comp_for_stellar(store)
 

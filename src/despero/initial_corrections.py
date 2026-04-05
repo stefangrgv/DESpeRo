@@ -11,8 +11,12 @@ def correct_for_bias(observation: Any, master_bias: Any) -> None:
 
 
 def correct_for_flat(observation: Any, master_flat: Any) -> None:
-    corrected_data = observation.raw_data.astype(np.float64) / master_flat.normalized_data
-    observation.raw_data = np.clip(corrected_data, 0, 2**16).astype(np.uint16)
+    obs = observation.raw_data
+    flat = master_flat.normalized_data
+
+    valid = np.isfinite(flat) & (flat > 0)
+
+    observation.raw_data = np.divide(obs, flat, out=np.zeros_like(obs, dtype=np.float32), where=valid)
 
 
 def clean_cosmics(stellar: Any) -> None:

@@ -80,11 +80,8 @@ def _trace_order(image: np.ndarray, starting_row: int, starting_column: int, fou
     return pixels
 
 
-def find_orders_coordinates(store: Any, use_master_flat: bool, degree: int = 10, draw: bool = False) -> None:
-    if use_master_flat:
-        data = store.master_flats[0].raw_data
-    else:
-        data = np.median([flat.raw_data for flat in store.flat], axis=0)
+def find_orders_coordinates(store: Any, degree: int = 10, draw: bool = False) -> None:
+    data = store.master_flats[0].raw_data
     orders_brightest_pixels = _get_orders_brightest_pixels(data)
     found = []
     for i in range(len(orders_brightest_pixels)):
