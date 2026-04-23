@@ -28,6 +28,12 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             # Order does not match any order in the comparison standard - will be ignored
             continue
         i_comp = i_standard - order_shift
+        if i_standard >= len(comp_standard.orders):
+            # standard does not have that many orders, ignore
+            continue
+        if i_comp >= len(comp.orders):
+            # comp does not have that many orders, ignore
+            continue
         standard_order = comp_standard.orders[i_standard]
         comp_order = comp.orders[i_comp]
         comp_intensity = np.asarray(comp_order.intensity, dtype=np.float16)
