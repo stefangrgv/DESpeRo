@@ -36,13 +36,6 @@ def load_npy_spectrum(fpath: str) -> np.ndarray:
     return np.load(fpath, allow_pickle=True).item()
 
 
-def get_readtime_and_readnoise(
-    fpath: str,
-) -> tuple[int | float, int | float]:
-    header, _ = load_fits(fpath)
-    return (header["READTIME"], header["RDNOISE"])
-
-
 def get_readtimes(journal: list[dict]) -> list[int | float]:
     return list(set([spec["readtime"] for spec in journal]))
 

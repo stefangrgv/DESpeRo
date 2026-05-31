@@ -30,29 +30,40 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
                 cheb_coefs = observation.orders[i].coordinates.coeff.tolist()
 
             hdu = fits.PrimaryHDU(data=flux_array)
-            hdr = hdu.header
 
-            hdr["NAXIS"] = 1
-            hdr["NAXIS1"] = len(flux_array)
+            # copy header from raw .fits
+            for key, value in observation.header.items():
+                hdu.header[key] = value
 
-            hdr["BUNIT"] = ""
+            # if NAXIS* exists in header, delete it, otherwise the code below will cause exception
+            for key, value in hdu.header.items():
+                if key.startswith("NAXIS"):
+                    del hdu.header[key]
+
+            # add wavelength information to header
+            hdu.header["NAXIS"] = 1
+            hdu.header["NAXIS1"] = len(flux_array)
+            hdu.header["BUNIT"] = ""
 
             w = WCS(naxis=1)
             w.wcs.ctype = ["AWAV"]
             w.wcs.crpix = [1]
             w.wcs.crval = [wavelength[0]]
 
-            # Compute a nominal increment (assumes nearly uniform spacing)
+            # compute a nominal increment (assumes nearly uniform spacing)
             if len(wavelength) > 1:
                 dw = wavelength[1] - wavelength[0]
             else:
                 dw = 1.0
             w.wcs.cdelt = [dw]
-            hdr.update(w.to_header())
-            hdr["WAT1_001"] = "system=multispec label=Wavelength units=Angstroms"
+            hdu.header.update(w.to_header())
+            hdu.header["WAT1_001"] = "system=multispec label=Wavelength units=Angstroms"
             order = len(cheb_coefs) - 1
             coeff_str = " ".join(f"coeff{i}={coef:.6g}" for i, coef in enumerate(cheb_coefs))
-            hdr["WAT2_001"] = f"wtype=chebyshev order={order} {coeff_str}"
-            hdu.writeto(f"{output_dir}/{output_filename_base}_order_{i + 1}.fits", overwrite=True)
+            hdu.header["WAT2_001"] = f"wtype=chebyshev order={order} {coeff_str}"
+
+            hdu.writeto(
+                f"{output_dir}/{output_filename_base}_order_{i + 1}.fits", overwrite=True, output_verify="silentfix"
+            )
         except Exception as exc:
             print(f"Error: cannot save .fits spectrum for order #{i + 1} of {observation.fits_file}: {exc}")

@@ -40,7 +40,6 @@ class Store:
             fits_file = self.directory / f"{_fits[i]}.fits"
             date = datetime.strptime(_dates[i], "%Y-%m-%dT%H:%M:%S")
             exposure_time = float(_exp[i])
-            (readtime, rdnoise) = utils.get_readtime_and_readnoise(fits_file)
             if _exposure_type[i] == "object":
                 exposure_type = utils.EXPOSURE_TYPES.STELLAR
                 target_array = self.stellar
@@ -53,7 +52,7 @@ class Store:
             elif _exposure_type[i] == "comp":
                 exposure_type = utils.EXPOSURE_TYPES.COMP
                 target_array = self.comp
-            observation = Observation(self, Path(fits_file), exposure_type, date, exposure_time, readtime, rdnoise)
+            observation = Observation(self, Path(fits_file), exposure_type, date, exposure_time)
             target_array.append(observation)
 
     def create_journal_for_inspect_job(

@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +15,8 @@ class Observation:
         exposure_type: Any,
         date: Any,
         exposure_time: float | int,
-        readtime: float | int,
-        rdnoise: float | int,
+        readtime: float | int | None = None,
+        rdnoise: float | int | None = None,
         load: bool = True,
     ):
         self.store = store
@@ -34,12 +35,21 @@ class Observation:
         if load:
             header, raw_data = load_fits(self.fits_file)
             self.raw_data = raw_data.astype(np.float32)
+            self.header = header
+            today = date.today().isoformat()
+            self.header["HISTORY"] = f"Reduced by DESpeRo on {today}"
+
+            if self.readtime is None:
+                self.readtime = self.header.get("READTIME", None)
+
+            if self.rdnoise is None:
+                self.rdnoise = self.header.get("RDNOISE", None)
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
                 try:
-                    self.ra = header["RA"]
-                    self.dec = header["DEC"]
-                    self.jd = header["JD-OBS"]
+                    self.ra = self.header["RA"]
+                    self.dec = self.header["DEC"]
+                    self.jd = self.header["JD-OBS"]
                 except KeyError as exc:
                     if self.store.reporter:
                         self.store.reporter.warning(str(exc))
