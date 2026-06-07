@@ -33,13 +33,23 @@ def fit_line_with_gaussian(
     p0 = [a_guess, x0_guess, sigma_guess, offset_guess]
 
     # Set bounds for the parameters
-    lower_bounds = [0, approx_peak - FIT_WINDOW_HW, 0, 0]  # Amplitude >= 0, x0 within window, sigma >= 0, offset >= 0
-    upper_bounds = [
-        np.max(intensity),
-        approx_peak + FIT_WINDOW_HW,
-        np.inf,
-        np.percentile(intensity_window, 10),  # Limit the offset to 10% of the intensity in the window
-    ]  # No upper limit except for x0 within window
+    lower_a = 0
+    lower_x0 = approx_peak - FIT_WINDOW_HW
+    lower_sigma = 0
+    lower_offset = 0
+    lower_bounds = [lower_a, lower_x0, lower_sigma, lower_offset]
+
+    # No upper limit except for x0 within window
+    upper_a = np.max(intensity)
+    if upper_a == lower_a:
+        upper_a = np.inf
+    upper_x0 = approx_peak + FIT_WINDOW_HW
+    upper_sigma = np.inf
+    upper_offset = np.percentile(intensity_window, 10)  # Limit the offset to 10% of the intensity in the window
+    if upper_offset == lower_offset:
+        upper_offset = np.inf
+    upper_bounds = [upper_a, upper_x0, upper_sigma, upper_offset]
+
     bounds = lower_bounds, upper_bounds
 
     # Fit Gaussian to the data
