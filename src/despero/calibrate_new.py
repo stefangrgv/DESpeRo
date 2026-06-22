@@ -6,6 +6,7 @@ from scipy.signal import correlate, find_peaks
 
 from despero.store.line import Line
 from despero.utils import load_comp_standard
+from despero.parameters import CUTOFF
 
 # script for testing
 
@@ -61,16 +62,6 @@ def get_best_shift(comp_order, standard_order) -> list[float]:
 # get_best_shift(comp_order=comp[10], standard_order=st.orders[10])
 # print(time.time() - start)
 
-start = time.time()
-st_peaks = []
-for i_st in range(len(st.orders)):
-    peaks, _ = find_peaks(st.orders[i_st].intensity, prominence=0.001)
-    st_peaks.append(peaks)
-
-comp_peaks = []
-for i in range(len(comp)):
-    peaks, _ = find_peaks(comp[i]["intensity"], prominence=0.001)
-    comp_peaks.append(peaks)
 
 
 def get_distances_between_peaks(peaks):
@@ -82,27 +73,57 @@ def get_distances_between_peaks(peaks):
         distances.append(d)
     return distances
 
+def _reformat_comp(old_comp, standard):
+    from despero.store.observation import Observation
+    from despero.store.order import Order
+    from despero.store.order_coordinates import OrderCoordinates
+    from despero.utils import EXPOSURE_TYPES
+    new_comp = Observation(store=standard.store, fits_file=None, exposure_type=EXPOSURE_TYPES.COMP, date=None, exposure_time=0, load=False)
+    new_comp.orders = []
+    for i, order in enumerate(old_comp):
+        coordinates = OrderCoordinates(i, [], order["columns"])
+        new_comp.orders.append(Order(observation=new_comp, coordinates=coordinates))
+        new_comp.orders[-1].intensity = order["intensity"]
+    return new_comp
 
-# c_d = get_distances_between_peaks(comp_peaks[10])
-# s_d = get_distances_between_peaks(st_peaks[10])
-# print(c_d)
-# print(s_d)
-# print(time.time() - start)
+comp = _reformat_comp(comp, st)
 
 # TODO: add this to the standard
 for i in range(len(st.orders)):
     # moves lines from .coordinates to .order
     st.orders[i].identified_lines = []
-    for j, line in enumerate(st.orders[i].coordinates.lines):
+    for line in st.orders[i].coordinates.lines:
         st.orders[i].identified_lines.append(Line(order=st.orders[i], column=line[0], wavelength=line[1]))
 
-matches = []
-for i in range(len(st.orders)):
-    print(f"Matching #{i}...")
-    _matches = []
-    for j in range(len(st.orders)):
-        _matches.append(st.orders[i].match_lines_from(st.orders[j]))
-    matches.append(_matches)
+# TODO: I have way too many matches, something isn't right
+for i in range(1, len(comp.orders)):
+    peaks, _ = find_peaks(comp.orders[i].intensity, prominence=0.025, width=3)
+    print(i, len(peaks))
+    # plt.plot(comp.orders[i].coordinates.columns, comp.orders[i].intensity, color="black")
+    # plt.plot(st.orders[i].coordinates.columns, st.orders[i].intensity, color="green")
+    for peak in peaks:
+        # plt.axvline(peak + CUTOFF, color="red", ls='--')
+        comp.orders[i].identified_lines.append(Line(order=comp.orders[i], column=peak + CUTOFF))
+    # plt.title(i)
+    # plt.show()
+    # plt.cla()
+    # plt.clf()
+
+# TODO: how do we properly cross-iterate over 2 arrays of different length?
+def match(comp_st, comp_obs):
+    matches = []
+    for i in range(len(comp_st.orders)):
+        _matches = []
+        for j in range(len(comp_obs.orders)):
+            if i - 3 < j < i + 3:
+                _matches.append(comp_st.orders[i].match_lines_from(comp_obs.orders[j]))
+            else:
+                _matches.append([])
+        matches.append(_matches)
+        print(f"Matches for #{i}\t-\t{np.sum([len(m) for m in _matches])}")
+    return matches
+
+matches = match(st, comp)
 
 for i, all_order_matches in enumerate(matches):
     n_matches = [len(matches_in_order) for matches_in_order in all_order_matches]
