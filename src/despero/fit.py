@@ -4,7 +4,7 @@ import numpy as np
 from numpy.polynomial.chebyshev import Chebyshev, chebval
 from scipy.optimize import curve_fit, least_squares
 
-from despero.parameters import FIT_WINDOW_HW
+from despero.parameters import COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
 
 
 def gaussian(x: List[float | int] | np.ndarray, a: float, x0: float, sigma: float, offset: float) -> np.ndarray:
@@ -21,7 +21,9 @@ def fit_line_with_gaussian(
     ]  # Compensate for cutoff: column number is not equal to index number
 
     # Find a small window around the approximate peak
-    mask = (col > approx_peak - FIT_WINDOW_HW) & (col < approx_peak + FIT_WINDOW_HW)
+    mask = (col > approx_peak - COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW) & (
+        col < approx_peak + COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
+    )
     col_window = col[mask]
     intensity_window = intensity[mask]
 
@@ -29,12 +31,12 @@ def fit_line_with_gaussian(
     a_guess = intensity[approx_peak_intensity_index]  # Amplitude
     x0_guess = approx_peak  # Peak
     offset_guess = 0  # Amplitude baseline
-    sigma_guess = FIT_WINDOW_HW / 2  # Width
+    sigma_guess = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW / 2  # Width
     p0 = [a_guess, x0_guess, sigma_guess, offset_guess]
 
     # Set bounds for the parameters
     lower_a = 0
-    lower_x0 = approx_peak - FIT_WINDOW_HW
+    lower_x0 = approx_peak - COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
     lower_sigma = 0
     lower_offset = 0
     lower_bounds = [lower_a, lower_x0, lower_sigma, lower_offset]
@@ -43,7 +45,7 @@ def fit_line_with_gaussian(
     upper_a = np.max(intensity)
     if upper_a == lower_a:
         upper_a = np.inf
-    upper_x0 = approx_peak + FIT_WINDOW_HW
+    upper_x0 = approx_peak + COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
     upper_sigma = np.inf
     upper_offset = np.percentile(intensity_window, 10)  # Limit the offset to 10% of the intensity in the window
     if upper_offset == lower_offset:

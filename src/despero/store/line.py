@@ -2,8 +2,8 @@ from typing import Any
 
 import numpy as np
 
-from despero.parameters import (MATCHING_LINE_COLUMN_TOLERANCE,
-                                MATCHING_LINE_DISTANCE_TOLERANCE)
+from despero.parameters import (COMP_MATCHING_LINE_COLUMN_TOLERANCE,
+                                COMP_MATCHING_LINE_DISTANCE_TOLERANCE)
 
 
 class Line:
@@ -47,13 +47,13 @@ class LinePair:
 
     def __eq__(self, other):
         if (
-            np.abs(self.get_blue().column - other.get_blue().column) <= MATCHING_LINE_COLUMN_TOLERANCE
-            and np.abs(self.get_red().column - other.get_red().column) <= MATCHING_LINE_COLUMN_TOLERANCE
+            np.abs(self.get_blue().column - other.get_blue().column) <= COMP_MATCHING_LINE_COLUMN_TOLERANCE
+            and np.abs(self.get_red().column - other.get_red().column) <= COMP_MATCHING_LINE_COLUMN_TOLERANCE
         ):
             return True
         if (
-            np.abs(self.get_blue().column - other.get_red().column) <= MATCHING_LINE_COLUMN_TOLERANCE
-            and np.abs(self.get_red().column - other.get_blue().column) <= MATCHING_LINE_COLUMN_TOLERANCE
+            np.abs(self.get_blue().column - other.get_red().column) <= COMP_MATCHING_LINE_COLUMN_TOLERANCE
+            and np.abs(self.get_red().column - other.get_blue().column) <= COMP_MATCHING_LINE_COLUMN_TOLERANCE
         ):
             return True
         return False
@@ -61,7 +61,7 @@ class LinePair:
     def matches(self, other) -> bool:
         if self.distance == 0 or other.distance == 0:
             return False
-        return np.abs(self.distance - other.distance) <= MATCHING_LINE_DISTANCE_TOLERANCE
+        return np.abs(self.distance - other.distance) <= COMP_MATCHING_LINE_DISTANCE_TOLERANCE
 
 
 class MatchingPair:
