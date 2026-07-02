@@ -55,6 +55,7 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             comp_order=comp_order, standard_order=standard_order
         )
         comp_order.identified_lines = [[lines_column[i], lines_wavelength[i]] for i in range(len(lines_column))]
+        comp_order.corresponding_standard_order = standard_order
         if len(comp_order.identified_lines) > 0:
             cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
             comp_order.coordinates.coeff = cheby_fit.coef
