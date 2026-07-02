@@ -1,5 +1,8 @@
 from typing import Any
 
+import numpy as np
+from scipy.signal import correlate
+
 from despero.store.line import LinePair, MatchingPair
 
 
@@ -36,3 +39,14 @@ class Order:
                     if append:
                         matching_pairs.append(new_matching_pair)
         return matching_pairs
+
+    def get_shift_from(self, other):
+        y1c = self.intensity - np.mean(self.intensity)
+        y2c = other.intensity - np.mean(other.intensity)
+        corr = correlate(y2c, y1c, mode="full")
+
+        lags = np.arange(-len(self.intensity) + 1, len(self.intensity))
+        best_lag = lags[np.argmax(corr)]
+        dx = best_lag * (self.coordinates.columns[1] - self.coordinates.columns[0])
+
+        return dx
