@@ -80,7 +80,7 @@ def is_fit_ok(fit_coeffs: List[float]) -> bool:
 def get_finetuned_chebyshev(
     x: List[float] | np.ndarray, y: List[float] | np.ndarray, initial_coeffs: List[float]
 ) -> np.ndarray:
-    def residuals(coeffs, x_new, y_new, lambda_reg=0.1):
+    def residuals(coeffs, x_new, y_new, lambda_reg=0.01):
         # Compute the difference between the new dataset and the adjusted model
         model_vals = chebval(x_new, coeffs)
         data_residuals = model_vals - y_new

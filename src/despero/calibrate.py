@@ -57,12 +57,7 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             continue
         standard_order = comp_standard.orders[i_standard]
         comp_order = comp.orders[i_comp]
-        # TODO: _get_shift must be a method of Order, and take another order as argument
-        shift = _get_shift(
-            comp_order.coordinates.columns,
-            comp_order.intensity,
-            standard_order.intensity,
-        )
+        shift = comp_order.get_shift_from(standard_order)
         lines_column, lines_wavelength = _get_gaussian_fits_for_lines(
             comp_order=comp_order, standard_order=standard_order, shift=shift
         )
@@ -75,23 +70,6 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
             comp_order.coordinates.coeff = cheby_fit.coef
             comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
-
-
-def _get_shift(x1, y1, y2):
-    from scipy.signal import correlate
-
-    y1c = y1 - np.mean(y1)
-    y2c = y2 - np.mean(y2)
-
-    corr = correlate(y2c, y1c, mode="full")
-
-    lags = np.arange(-len(y1) + 1, len(y1))
-
-    best_lag = lags[np.argmax(corr)]
-
-    dx = best_lag * (x1[1] - x1[0])
-
-    return dx
 
 
 def get_comp_for_stellar(store: Any) -> None:
