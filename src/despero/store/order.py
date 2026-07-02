@@ -11,6 +11,7 @@ class Order:
         self.intensity = []
         self.normalized_intensity = []
         self.identified_lines = []  # for comp only
+        self.corresponding_standard_order = None
 
     def get_line_pairs(self):
         pairs = []

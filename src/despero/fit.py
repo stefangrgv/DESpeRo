@@ -16,7 +16,10 @@ def fit_line_with_gaussian(
 ) -> dict:
     col = np.asarray(col)
     intensity = np.asarray(intensity)
-    approx_peak_intensity_index = np.argwhere(col == approx_peak)[0][
+    argwhere_array = np.argwhere(col == approx_peak)
+    if not argwhere_array:  # TODO: why does this happen?
+        raise RuntimeError
+    approx_peak_intensity_index = argwhere_array[0][
         0
     ]  # Compensate for cutoff: column number is not equal to index number
 
