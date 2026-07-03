@@ -68,9 +68,16 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
         ]
         comp_order.corresponding_standard_order = standard_order
         if len(comp_order.identified_lines) >= 2:
-            cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
-            comp_order.coordinates.coeff = cheby_fit.coef
-            comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
+            n_lines = len(lines_column)
+            if n_lines >= 3:
+                cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
+                comp_order.coordinates.coeff = cheby_fit.coef
+                comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
+            # if there are fewer than 3 lines in the comp, don't try to fit a cheby with deg=3, even if the standard has it
+            else:
+                coeff = chebfit(lines_column, lines_wavelength, deg=1)
+                comp_order.coordinates.coeff = coeff
+                comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
         else:  # not enough lines to get a solution: use the shift-corrected standard instead
             lines_column = [line.column - shift for line in standard_order.identified_lines if line.column >= shift]
             lines_wavelength = [line.wavelength for line in standard_order.identified_lines if line.column >= shift]
