@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+from numpy.polynomial.chebyshev import chebfit, chebval
 
 from despero.fit import (fit_line_with_gaussian, get_finetuned_chebyshev,
                          is_fit_ok)
@@ -66,10 +67,40 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             for i in range(len(lines_column))
         ]
         comp_order.corresponding_standard_order = standard_order
-        if len(comp_order.identified_lines) > 0:
+        if len(comp_order.identified_lines) >= 2:
             cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
             comp_order.coordinates.coeff = cheby_fit.coef
             comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
+        else:  # not enough lines to get a solution: use the shift-corrected standard instead
+            lines_column = [line.column - shift for line in standard_order.identified_lines if line.column >= shift]
+            lines_wavelength = [line.wavelength for line in standard_order.identified_lines if line.column >= shift]
+            n_lines = len(lines_column)
+            if n_lines > 0:
+                deg = 3 if n_lines > 2 else 1
+                coeff = chebfit(lines_column, lines_wavelength, deg=deg)
+                comp_order.coordinates.coeff = coeff
+                comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
+
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots(nrows=3, sharex=True)
+        # ax[2].plot(standard_order.coordinates.columns, standard_order.intensity, color="purple")
+        # for line in standard_order.identified_lines:
+        #     ax[2].axvline(line.column, color='red', ls='--')
+        #     ax[2].text(x=line.column + 2, y=2*np.mean(standard_order.intensity), s=f"{line.wavelength:.2f}")
+        # ax[1].plot(comp_order.coordinates.columns, comp_order.intensity, color="black")
+        # for line in comp_order.identified_lines:
+        #     ax[1].axvline(line.column, color='red', ls='--')
+        #     ax[1].text(x=line.column + 2, y=2*np.mean(comp_order.intensity), s=f"{line.wavelength:.2f}")
+        # try:
+        #     ax[0].set_title(f"Order {i_comp}: {int(comp_order.wavelength[0])}:{int(comp_order.wavelength[-1])}")
+        # except Exception:
+        #     ax[0].set_title(f"Order {i_comp}")
+        # try:
+        #     ax[0].plot(comp_order.coordinates.columns, comp_order.wavelength, color="black")
+        # except Exception:
+        #     print("no wavelength solution")
+        # print(comp_order.coordinates.coeff)
+        # plt.show()
 
 
 def get_comp_for_stellar(store: Any) -> None:
