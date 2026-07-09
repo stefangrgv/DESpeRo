@@ -20,63 +20,66 @@ def _get_match_matrix(standard, comp):
     len_st = len(standard.orders)
     len_comp = len(comp.orders)
 
-    M = np.full((len_comp, len_st), -np.inf)
-    for j in range(len_comp):
-        for i in range(len_st):
-            if abs(i - j) > COMP_MATCHING_MAX_ADJACENT_ORDERS:
-                continue
+    matches = []
+    for j in range(COMP_MATCHING_DISCARD_EDGE_N_ORDERS, len_comp - COMP_MATCHING_DISCARD_EDGE_N_ORDERS):
+        _matches = []
+        for i in range(COMP_MATCHING_DISCARD_EDGE_N_ORDERS, len_st - COMP_MATCHING_DISCARD_EDGE_N_ORDERS):
+            if i - COMP_MATCHING_MAX_ADJACENT_ORDERS < j < i + COMP_MATCHING_MAX_ADJACENT_ORDERS:
+                _matches.append(comp.orders[j].match_lines_from(standard.orders[i]))
+            else:
+                _matches.append([])
+        matches.append(_matches)
 
-            matches = comp.orders[j].match_lines_from(standard.orders[i])
-            M[j, i] = len(matches)
+    M = np.zeros((len_comp + 1, len_st + 1))
+    for i_c in range(len(matches)):
+        for i_s in range(len(matches[i_c])):
+            M[i_c, i_s] = len(matches[i_c][i_s])
 
     return M
 
 
 def _get_best_monotonic_path(W):
-    discard = COMP_MATCHING_DISCARD_EDGE_N_ORDERS
-
-    n_comp, n_std = W.shape
+    discard = COMP_MATCHING_DISCARD_EDGE_N_ORDERS # keep it short
+    M = W[discard:-discard,:]
+    n_comp, n_std = M.shape
 
     dp = np.full((n_comp, n_std), -np.inf)
     prev = np.full((n_comp, n_std), -1, dtype=int)
+    dp[0] = M[0]
 
-    dp[discard] = W[discard]
+    for i in range(1, n_comp):
+        for j in range(1, n_std):
+            k = np.argmax(dp[i - 1, :j])
+            dp[i, j] = dp[i - 1, k] + M[i, j]
+            prev[i, j] = k
 
-    for i in range(discard + 1, n_comp - discard):
-        for j in range(discard, n_std - discard):
-            best_score = -np.inf
-            best_prev = -1
-
-            for k in range(discard, j):
-                if not np.isfinite(dp[i - 1, k]):
-                    continue
-
-                score = dp[i - 1, k] + W[i, j]
-                if score > best_score:
-                    best_score = score
-                    best_prev = k
-
-            dp[i, j] = best_score
-            prev[i, j] = best_prev
-
-    last_row = n_comp - discard - 1
-
-    j = np.argmax(dp[last_row])
-
+    j = np.argmax(dp[-1])
     path = []
-
-    i = last_row
-    while i >= discard and j >= 0:
-        path.append((i, j))
+    for i in reversed(range(n_comp)):
+        path.append((i + discard, j))
         j = prev[i, j]
-        i -= 1
-
     path.reverse()
 
-    return path
+    extended_path = []
+    path_1st_comp, path_1st_std = path[0]
+    delta = path_1st_std - path_1st_comp
+    for comp_order_n in range(path_1st_comp):
+        std_order_n = comp_order_n + delta
+        if comp_order_n > 0 and std_order_n > 0:
+            extended_path.append((comp_order_n, std_order_n))
+    extended_path = [*extended_path, *path]
+    path_last_comp, _ = path[-1]
+    absolute_last_comp_order_n = W.shape[0]
+    absolute_last_std_order_n = W.shape[1]
+    for comp_order_n in range(path_last_comp, absolute_last_comp_order_n):
+        std_order_n = comp_order_n + delta
+        if std_order_n <= absolute_last_std_order_n:
+            extended_path.append((comp_order_n, std_order_n))
+
+    return extended_path
 
 
-def get_comp_and_standard_matching_orders(comp, standard, plot=False):
+def get_comp_and_standard_matching_orders(comp, standard, plot=True):
     _add_most_likely_lines_to_comp(comp)
     M = _get_match_matrix(standard, comp)
     print(M.shape)
@@ -101,6 +104,5 @@ def get_comp_and_standard_matching_orders(comp, standard, plot=False):
         ax.legend()
 
         plt.tight_layout()
-        print(path)
         plt.show()
     return path
