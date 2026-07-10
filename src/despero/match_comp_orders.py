@@ -61,10 +61,10 @@ def _get_best_monotonic_path(W):
     path.reverse()
 
     extended_path = []
+    delta = np.median([p[0] - p[1] for p in path]).astype(int)
     path_1st_comp, path_1st_std = path[0]
-    delta = path_1st_std - path_1st_comp
     for comp_order_n in range(path_1st_comp):
-        std_order_n = comp_order_n + delta
+        std_order_n = comp_order_n - delta
         if comp_order_n > 0 and std_order_n > 0:
             extended_path.append((comp_order_n, std_order_n))
     extended_path = [*extended_path, *path]
@@ -72,7 +72,7 @@ def _get_best_monotonic_path(W):
     absolute_last_comp_order_n = W.shape[0]
     absolute_last_std_order_n = W.shape[1]
     for comp_order_n in range(path_last_comp, absolute_last_comp_order_n):
-        std_order_n = comp_order_n + delta
+        std_order_n = comp_order_n - delta
         if std_order_n <= absolute_last_std_order_n:
             extended_path.append((comp_order_n, std_order_n))
 
@@ -82,7 +82,6 @@ def _get_best_monotonic_path(W):
 def get_comp_and_standard_matching_orders(comp, standard, plot=True):
     _add_most_likely_lines_to_comp(comp)
     M = _get_match_matrix(standard, comp)
-    print(M.shape)
     path = _get_best_monotonic_path(M)
     comp = np.array([p[0] for p in path])
     std = np.array([p[1] for p in path])
