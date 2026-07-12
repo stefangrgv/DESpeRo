@@ -54,7 +54,7 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
     #     plt.show()
     #     import pdb; pdb.set_trace()
 
-    # return lines_column, lines_wavelength
+    return lines_column, lines_wavelength
 
 
 def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
