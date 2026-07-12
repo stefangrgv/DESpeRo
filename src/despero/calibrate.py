@@ -9,6 +9,8 @@ from despero.match_comp_orders import get_comp_and_standard_matching_orders
 from despero.store.line import Line
 from despero.store.order import Order
 
+class CalibrationException(Exception):
+    pass
 
 def get_useful_comp_indexes(store: Any):
     useful_indexes = [stellar.comp_index for stellar in store.stellar]
@@ -30,14 +32,29 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
                 comp_order.coordinates.columns, comp_intensity, int(line[0] - shift)
             )
             fit_ok = is_fit_ok(line_fit_coeffs)
-            if fit_ok:
+            is_line_peak_prominent = line_fit_coeffs["a"] >= 0.001
+            if fit_ok and is_line_peak_prominent:
                 lines_column.append(float(line_fit_coeffs["x0"]))
                 lines_wavelength.append(line[1])
 
         except RuntimeError:  # gaussian fit did not converge: line not found
             continue
+    
+    # DEBUG for peak prominent filtering
+    # if comp_order.coordinates.number == len(comp_order.observation.orders) - 46 - 1:
+    #     import matplotlib.pyplot as plt
+    #     plt.plot(comp_order.coordinates.columns, comp_intensity, color="black")
+    #     for n in range(len(lines_column)):
+    #         # plt.axvline(pk[n], color="pink")
+    #         if pr[n]:
+    #             plt.axvline(lines_column[n], ls="--", color="red")
+    #         else:
+    #             plt.axvline(lines_column[n], ls="--", color="blue")
+    #         plt.text(x=lines_column[n]+2, y=0.5, s=f"{lines_wavelength[n]:.2f}")
+    #     plt.show()
+    #     import pdb; pdb.set_trace()
 
-    return lines_column, lines_wavelength
+    # return lines_column, lines_wavelength
 
 
 def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
@@ -47,7 +64,10 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
         order.intensity = np.asarray(order.intensity, dtype=np.float16)
         order.intensity /= np.max(order.intensity)
 
-    corresponding_apertures = get_comp_and_standard_matching_orders(comp=comp, standard=comp_standard)
+    try:
+        corresponding_apertures = get_comp_and_standard_matching_orders(comp=comp, standard=comp_standard)
+    except Exception as exc:
+        raise CalibrationException(f"Error calibrating ThAr spectrum {comp.fits_file.stem.split('/')[-1]}: {exc}")
     for order_pair in corresponding_apertures:
         i_comp, i_standard = order_pair
         if i_standard >= len(comp_standard.orders):
