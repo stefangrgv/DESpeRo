@@ -73,7 +73,7 @@ def _get_best_monotonic_path(W):
     return extended_path
 
 
-def get_comp_and_standard_matching_orders(comp, standard, plot=True):
+def get_comp_and_standard_matching_orders(comp, standard, plot=False):
     _add_most_likely_lines_to_comp(comp)
     M = _get_match_matrix(standard, comp)
     path = _get_best_monotonic_path(M)
