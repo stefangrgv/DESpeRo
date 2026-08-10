@@ -1,16 +1,18 @@
 import numpy as np
 from scipy.signal import find_peaks
 
-from despero.parameters import (COMP_MATCHING_DISCARD_EDGE_N_ORDERS,
-                                COMP_MATCHING_KEEP_STRONGEST_N_LINES_IN_COMP,
-                                COMP_MATCHING_MAX_ADJACENT_ORDERS, CUTOFF)
+from despero.parameters import COMP_MATCHING_DISCARD_EDGE_N_ORDERS as DISCARD_N
+from despero.parameters import \
+    COMP_MATCHING_KEEP_STRONGEST_N_LINES_IN_COMP as KEEP_N
+from despero.parameters import COMP_MATCHING_MAX_ADJACENT_ORDERS as MATCH_N
+from despero.parameters import CUTOFF
 from despero.store.line import Line
 
 
 def _add_most_likely_lines_to_comp(comp):
-    for i in range(COMP_MATCHING_DISCARD_EDGE_N_ORDERS, len(comp.orders) - COMP_MATCHING_DISCARD_EDGE_N_ORDERS):
+    for i in range(DISCARD_N, len(comp.orders) - DISCARD_N):
         peaks, _ = find_peaks(comp.orders[i].intensity, prominence=0.025, width=3)
-        top_indexes = np.argsort(comp.orders[i].intensity[peaks])[-COMP_MATCHING_KEEP_STRONGEST_N_LINES_IN_COMP:]
+        top_indexes = np.argsort(comp.orders[i].intensity[peaks])[-KEEP_N:]
         peaks = peaks[top_indexes]
         for peak in peaks:
             comp.orders[i].identified_lines.append(Line(order=comp.orders[i], column=peak + CUTOFF))
@@ -20,27 +22,19 @@ def _get_match_matrix(standard, comp):
     len_st = len(standard.orders)
     len_comp = len(comp.orders)
 
-    matches = []
-    for j in range(COMP_MATCHING_DISCARD_EDGE_N_ORDERS, len_comp - COMP_MATCHING_DISCARD_EDGE_N_ORDERS):
-        _matches = []
-        for i in range(COMP_MATCHING_DISCARD_EDGE_N_ORDERS, len_st - COMP_MATCHING_DISCARD_EDGE_N_ORDERS):
-            if i - COMP_MATCHING_MAX_ADJACENT_ORDERS < j < i + COMP_MATCHING_MAX_ADJACENT_ORDERS:
-                _matches.append(comp.orders[j].match_lines_from(standard.orders[i]))
-            else:
-                _matches.append([])
-        matches.append(_matches)
+    M = np.zeros((len_comp, len_st))
 
-    M = np.zeros((len_comp + 1, len_st + 1))
-    for i_c in range(len(matches)):
-        for i_s in range(len(matches[i_c])):
-            M[i_c, i_s] = len(matches[i_c][i_s])
+    for j in range(DISCARD_N, len_comp - DISCARD_N):
+        for i in range(DISCARD_N, len_st - DISCARD_N):
+            if abs(i - j) < MATCH_N:
+                M[j, i] = len(comp.orders[j].match_lines_from(standard.orders[i]))
 
     return M
 
 
 def _get_best_monotonic_path(W):
-    discard = COMP_MATCHING_DISCARD_EDGE_N_ORDERS # keep it short
-    M = W[discard:-discard,:]
+    discard = DISCARD_N  # keep it short
+    M = W[discard:-discard, :]
     n_comp, n_std = M.shape
 
     dp = np.full((n_comp, n_std), -np.inf)

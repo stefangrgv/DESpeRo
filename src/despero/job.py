@@ -98,11 +98,12 @@ class Job:
             reporter.set_status(name="orders", finished=True)
             reporter.set_order_coordinates(store.order_coordinates)
 
+        for master_flat in store.master_flats:
+            master_flat.normalize()
+
         if self.flat:
             if reporter:
                 reporter.set_status(name="flat", finished=False)
-            for master_flat in store.master_flats:
-                master_flat.normalize()
 
             for observation in [
                 observation for observation in store.stellar if observation.readtime == master_flat.readtime
@@ -112,9 +113,10 @@ class Job:
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot apply flat correction to {observation.fits_file}: {exc}")
-            if reporter:
-                reporter.set_master_flats(store.master_flats)
-                reporter.set_status(name="flat", finished=True)
+
+        if reporter:
+            reporter.export_raw_data(store.master_flats, store.stellar)
+            reporter.set_status(name="flat", finished=True)
 
         get_comp_for_stellar(store)
 

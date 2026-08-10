@@ -9,8 +9,10 @@ from despero.match_comp_orders import get_comp_and_standard_matching_orders
 from despero.store.line import Line
 from despero.store.order import Order
 
+
 class CalibrationException(Exception):
     pass
+
 
 def get_useful_comp_indexes(store: Any):
     useful_indexes = [stellar.comp_index for stellar in store.stellar]
@@ -39,7 +41,7 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
 
         except RuntimeError:  # gaussian fit did not converge: line not found
             continue
-    
+
     # DEBUG for peak prominent filtering
     # if comp_order.coordinates.number == len(comp_order.observation.orders) - 46 - 1:
     #     import matplotlib.pyplot as plt
@@ -55,6 +57,42 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
     #     import pdb; pdb.set_trace()
 
     return lines_column, lines_wavelength
+
+
+def _solve_wavelength(comp_order, standard_order, shift):
+    lines_column = [line.column for line in comp_order.identified_lines]
+    lines_wavelength = [line.wavelength for line in comp_order.identified_lines]
+    n_lines = len(lines_column)
+
+    if n_lines >= 2:
+        if n_lines >= 3:
+            cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
+            comp_order.coordinates.coeff = cheby_fit.coef
+            comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
+        # if there are fewer than 3 lines in the comp, don't try to fit a cheby with deg=3, even if the standard has it
+        else:
+            coeff = chebfit(lines_column, lines_wavelength, deg=1)
+            comp_order.coordinates.coeff = coeff
+            comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
+    else:  # not enough lines to get a solution: use the shift-corrected standard instead
+        lines_column = [line.column - shift for line in standard_order.identified_lines if line.column >= shift]
+        lines_wavelength = [line.wavelength for line in standard_order.identified_lines if line.column >= shift]
+        if n_lines > 0:
+            deg = 3 if n_lines > 2 else 1
+            coeff = chebfit(lines_column, lines_wavelength, deg=deg)
+            comp_order.coordinates.coeff = coeff
+            comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
+
+def _filter_lines(comp_order):
+    x = [line.column for line in comp_order.identified_lines]
+    y = [line.wavelength for line in comp_order.identified_lines]
+    y_fit = chebval(x, comp_order.coordinates.coeff)
+    residuals = y - y_fit
+    sigma = np.std(residuals, ddof=1)
+    mask = np.abs(residuals) < 3 * sigma
+    filtered_lines_array = np.asarray(comp_order.identified_lines)[mask]
+    # also check if wl increases monotonically, if not - remove the line with the largest std
+    return filtered_lines_array.tolist()
 
 
 def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
@@ -87,26 +125,15 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
             for i in range(len(lines_column))
         ]
         comp_order.corresponding_standard_order = standard_order
-        if len(comp_order.identified_lines) >= 2:
-            n_lines = len(lines_column)
-            if n_lines >= 3:
-                cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
-                comp_order.coordinates.coeff = cheby_fit.coef
-                comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
-            # if there are fewer than 3 lines in the comp, don't try to fit a cheby with deg=3, even if the standard has it
-            else:
-                coeff = chebfit(lines_column, lines_wavelength, deg=1)
-                comp_order.coordinates.coeff = coeff
-                comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
-        else:  # not enough lines to get a solution: use the shift-corrected standard instead
-            lines_column = [line.column - shift for line in standard_order.identified_lines if line.column >= shift]
-            lines_wavelength = [line.wavelength for line in standard_order.identified_lines if line.column >= shift]
-            n_lines = len(lines_column)
-            if n_lines > 0:
-                deg = 3 if n_lines > 2 else 1
-                coeff = chebfit(lines_column, lines_wavelength, deg=deg)
-                comp_order.coordinates.coeff = coeff
-                comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
+
+        c = 0
+        iterate = True
+        while iterate:
+            _solve_wavelength(comp_order=comp_order, standard_order=standard_order, shift=shift)
+            filtered_lines = _filter_lines(comp_order=comp_order)
+            iterate = len(comp_order.identified_lines) != len(filtered_lines)
+            c += 1
+            comp_order.identified_lines = filtered_lines
 
         # import matplotlib.pyplot as plt
         # fig, ax = plt.subplots(nrows=3, sharex=True)
