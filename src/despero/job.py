@@ -2,7 +2,7 @@ import numpy as np
 from pathlib import Path
 from typing import Any
 
-from despero.apall import extract_2d_spectra, find_orders_coordinates
+from despero.apall import extract_2d_spectra, find_orders_coordinates, set_order_coordinates_from_file
 from despero.calibrate import (calibrate_comp_spectra, calibrate_stellar,
                                get_comp_for_stellar, get_useful_comp_indexes)
 from despero.initial_corrections import (clean_cosmics, correct_for_bias,
@@ -19,6 +19,7 @@ class Job:
     def __init__(
         self,
         observation_dir: Path | str,
+        order_file: str,
         cosmic: bool = False,
         bias: bool = False,
         flat: bool = False,
@@ -39,6 +40,7 @@ class Job:
         self.ascii_2d = ascii_2d
         self.ascii_2d_norm = ascii_2d_norm
         self.ascii_1d_norm = ascii_1d_norm
+        self.order_file = order_file
         self.store = Store(directory=self.observation_dir)
 
 
@@ -60,6 +62,11 @@ class Job:
 
 
     def start(self, reporter: Any | None = None, show_files_when_done: bool = False):
+        if reporter:
+            self.store.reporter = reporter
+
+        self.store.load_journal_from_file()
+
         if reporter:
             reporter.render_working_screen()
 
@@ -100,9 +107,14 @@ class Job:
             if reporter:
                 reporter.set_status(name="bias", finished=True)
 
+        self.store.create_master_flats()
+
         if reporter:
             reporter.set_status(name="orders", finished=False)
-        find_orders_coordinates(self.store)
+        if self.order_file:
+            set_order_coordinates_from_file(self.store, self.order_file)
+        else:
+            find_orders_coordinates(self.store)
 
         if reporter:
             reporter.set_status(name="orders", finished=True)

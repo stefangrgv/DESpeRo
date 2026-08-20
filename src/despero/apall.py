@@ -1,4 +1,6 @@
+import json
 from typing import Any
+from pathlib import Path
 
 import numpy as np
 from scipy.signal import find_peaks
@@ -98,6 +100,22 @@ def find_orders_coordinates(store: Any, degree: int = 10, draw: bool = False) ->
         coordinates = OrderCoordinates(i, found[i]["rows"], found[i]["columns"])
         store.order_coordinates.append(coordinates)
 
+
+def set_order_coordinates_from_file(store: Any, file_path: Path | str) -> None:
+    file_path = Path(file_path)
+    with open(file_path) as stream:
+        file_contents = json.load(stream)
+
+    _store_coordinates = []
+    data = store.stellar[0].raw_data
+    for i in sorted(file_contents.keys()):
+        columns = np.linspace(CUTOFF, data.shape[1] - 1 - CUTOFF, data.shape[1] - 2 * CUTOFF, dtype=int)
+        coeffs = file_contents[i]["coefficients"]
+        polynomial = np.poly1d(list(reversed(coeffs)))
+        rows = polynomial(columns)
+        coordinates = OrderCoordinates(i, rows, columns)
+        _store_coordinates.append(coordinates)
+    store.order_coordinates = _store_coordinates
 
 def _extract_2d(store: Any, observation: Any) -> None:
     if observation.wavelength_calibrated:
