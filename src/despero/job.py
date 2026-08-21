@@ -8,7 +8,7 @@ from despero.calibrate import (calibrate_comp_spectra, calibrate_stellar,
 from despero.initial_corrections import (clean_cosmics, correct_for_bias,
                                          correct_for_flat)
 from despero.normalize import normalize, stitch_oned
-from despero.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii
+from despero.save.as_ascii import save_as_1d_ascii_norm, save_as_2d_ascii, save_uncalibrated
 from despero.save.as_fits import save_as_fits
 from despero.store.store import Store
 from despero.utils import load_comp_standard, open_directory
@@ -151,6 +151,7 @@ class Job:
                 reporter.set_files_progress(file=observation)
                 extract_2d_spectra(observation)
                 reporter.set_files_progress(file=observation, done=True)
+                save_uncalibrated(observation=observation)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")

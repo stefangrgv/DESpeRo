@@ -82,3 +82,17 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
     header_dict = _header_to_dict(observation.header)
     with open(f"{output_dir}/{output_filename_base}_header.json", "w") as f:
         json.dump(header_dict, f, indent=4)
+
+def save_uncalibrated(observation: Any):
+    output_dir = Path(os.path.dirname(observation.fits_file))
+    output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
+    output_dir = output_dir / "reduced" / "uncal" / output_filename_base
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for n, order in list(reversed(enumerate(observation.orders))):
+        output_filename = f"{output_filename_base}_order_{n + 1}"
+        with open(f"{output_dir}/{output_filename}.txt", "w") as f:
+            f.write("#COLUMN\tINTENSITY\n")
+            for i, col in enumerate(order.coordinates.columns):
+                intensity = order.intensity[i]
+                f.write(f"{col}\t{intensity}\n")
