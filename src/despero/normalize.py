@@ -16,13 +16,19 @@ def _fit_continuum(
 
 def normalize(observation: Any) -> None:
     for i, order in enumerate(observation.orders):
+        try:
+            continuum = _fit_continuum(order.coordinates.columns, order.intensity)
+            observation.orders[i].normalized_uncalibrated_intensity = order.intensity / continuum
+        except Exception as e:
+            print(f"\tCould not normalize uncalibrated order #{i}: {e}")
+            observation.orders[i].normalized_calibrated_intensity = [np.NAN for _ in order.intensity]
         if len(order.wavelength):
             try:
                 continuum = _fit_continuum(order.wavelength, order.intensity)
-                observation.orders[i].normalized_intensity = order.intensity / continuum
+                observation.orders[i].normalized_calibrated_intensity = order.intensity / continuum
             except Exception as e:
                 print(f"\tCould not normalize order #{i}: {e}")
-                observation.orders[i].normalized_intensity = [np.NAN for _ in order.intensity]
+                observation.orders[i].normalized_calibrated_intensity = [np.NAN for _ in order.intensity]
 
 
 def stitch_oned(stellar: Any) -> None:
@@ -36,7 +42,7 @@ def stitch_oned(stellar: Any) -> None:
                 # no overlap
                 wavelength = [*wavelength, *list(order.wavelength)]
                 intensity = [*intensity, *list(order.intensity)]
-                n_intensity = [*n_intensity, *list(order.normalized_intensity)]
+                n_intensity = [*n_intensity, *list(order.normalized_calibrated_intensity)]
             else:
                 overlap_prev_ind = np.where(wavelength >= order.wavelength[0])[0]
                 overlap_next_ind = np.where(order.wavelength <= wavelength[-1])[0]
@@ -46,12 +52,12 @@ def stitch_oned(stellar: Any) -> None:
                     # previous (bluer) order has more signal
                     wavelength = [*wavelength, *list(order.wavelength[overlap_next_ind[-1] :])]
                     intensity = [*intensity, *list(order.intensity[overlap_next_ind[-1] :])]
-                    n_intensity = [*n_intensity, *list(order.normalized_intensity[overlap_next_ind[-1] :])]
+                    n_intensity = [*n_intensity, *list(order.normalized_calibrated_intensity[overlap_next_ind[-1] :])]
                 else:
                     keep_ind = [i for i in range(len(wavelength)) if i not in overlap_prev_ind]
                     wavelength = [*[wavelength[i] for i in keep_ind], *list(order.wavelength)]
                     intensity = [*[intensity[i] for i in keep_ind], *list(order.intensity)]
-                    n_intensity = [*[n_intensity[i] for i in keep_ind], *list(order.normalized_intensity)]
+                    n_intensity = [*[n_intensity[i] for i in keep_ind], *list(order.normalized_calibrated_intensity)]
         except IndexError:
             # current order has no wavelength solution, skip it
             continue

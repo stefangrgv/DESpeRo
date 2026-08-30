@@ -111,10 +111,10 @@ class Job:
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
-        if self.order_file:
-            set_order_coordinates_from_file(self.store, self.order_file)
-        else:
+        if "DEFAULT-ORDER-COORDINATES-MENU-ITEM" in str(self.order_file):
             find_orders_coordinates(self.store)
+        else:
+            set_order_coordinates_from_file(self.store, self.order_file)
 
         if reporter:
             reporter.set_status(name="orders", finished=True)
@@ -151,7 +151,6 @@ class Job:
                 reporter.set_files_progress(file=observation)
                 extract_2d_spectra(observation)
                 reporter.set_files_progress(file=observation, done=True)
-                save_uncalibrated(observation=observation)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
@@ -246,6 +245,8 @@ class Job:
 
         for observation in self.store.stellar:
             reporter.set_files_progress(file=observation)
+            save_uncalibrated(observation=observation)
+            save_uncalibrated(observation=observation, normalized=True)
             if self.fits_2d:
                 save_as_fits(observation)
             if self.fits_2d_norm:

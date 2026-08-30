@@ -72,7 +72,7 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
             if normalized:
                 f.write("#WAVELENGTH\tNORMALIZED INTENSITY\n")
                 for i in range(len(order.wavelength)):
-                    f.write(f"{order.wavelength[i]:.10f}\t{order.normalized_intensity[i]:.10f}\n")
+                    f.write(f"{order.wavelength[i]:.10f}\t{order.normalized_calibrated_intensity[i]:.10f}\n")
             else:
                 f.write("#WAVELENGTH\tINTENSITY\n")
                 for i in range(len(order.wavelength)):
@@ -83,16 +83,30 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
     with open(f"{output_dir}/{output_filename_base}_header.json", "w") as f:
         json.dump(header_dict, f, indent=4)
 
-def save_uncalibrated(observation: Any):
+def save_uncalibrated(observation: Any, normalized: bool = False) -> None:
     output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
-    output_dir = output_dir / "reduced" / "uncal" / output_filename_base
+    output_dir_root = output_dir / "reduced"
+    if normalized:
+        output_dir = output_dir_root / "uncal_norm" / output_filename_base
+    else:
+        output_dir = output_dir_root / "uncal" / output_filename_base
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for n, order in list(reversed(enumerate(observation.orders))):
+    for n, order in enumerate(observation.orders):
         output_filename = f"{output_filename_base}_order_{n + 1}"
         with open(f"{output_dir}/{output_filename}.txt", "w") as f:
-            f.write("#COLUMN\tINTENSITY\n")
+            if normalized:
+                f.write("#COLUMN\tnormalized_calibrated_intensity\n")
+            else:
+                f.write("#COLUMN\tINTENSITY\n")
+
             for i, col in enumerate(order.coordinates.columns):
-                intensity = order.intensity[i]
-                f.write(f"{col}\t{intensity}\n")
+                try:
+                    if normalized:
+                        intensity = order.normalized_uncalibrated_intensity[i]
+                    else:
+                        intensity = order.intensity[i]
+                    f.write(f"{col}\t{intensity}\n")
+                except Exception as exc:
+                    print(f"Error exporting uncalibrated order #{i}: {exc}")

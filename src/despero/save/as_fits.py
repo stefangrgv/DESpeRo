@@ -20,7 +20,7 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
     for i in range(len(observation.orders)):
         try:
             if normalized:
-                flux_array = observation.orders[i].normalized_intensity
+                flux_array = observation.orders[i].normalized_calibrated_intensity
             else:
                 flux_array = observation.orders[i].intensity
             wavelength = observation.orders[i].wavelength
