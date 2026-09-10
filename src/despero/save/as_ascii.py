@@ -37,9 +37,8 @@ def _header_to_dict(header: fits.Header) -> dict:
 
 
 def save_as_1d_ascii_norm(observation: Any) -> None:
-    output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
-    output_dir = output_dir / "reduced" / "1d"
+    output_dir = observation.store.output_directory / "1d"
     os.makedirs(output_dir, exist_ok=True)
 
     # save spectrum
@@ -55,9 +54,8 @@ def save_as_1d_ascii_norm(observation: Any) -> None:
 
 
 def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
-    output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
-    output_dir = output_dir / "reduced" / "2d"
+    output_dir = observation.store.output_directory / "2d"
     if normalized:
         output_dir = output_dir / "ascii_normalized" / output_filename_base
     else:
@@ -84,13 +82,11 @@ def save_as_2d_ascii(observation: Any, normalized: bool = False) -> None:
         json.dump(header_dict, f, indent=4)
 
 def save_uncalibrated(observation: Any, normalized: bool = False) -> None:
-    output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
-    output_dir_root = output_dir / "reduced"
     if normalized:
-        output_dir = output_dir_root / "uncal_norm" / output_filename_base
+        output_dir = observation.store.output_directory / "uncal_norm" / output_filename_base
     else:
-        output_dir = output_dir_root / "uncal" / output_filename_base
+        output_dir = observation.store.output_directory / "uncal" / output_filename_base
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for n, order in enumerate(observation.orders):

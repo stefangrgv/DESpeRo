@@ -86,6 +86,8 @@ def _solve_wavelength(comp_order, standard_order, shift):
 def _filter_lines(comp_order):
     x = [line.column for line in comp_order.identified_lines]
     y = [line.wavelength for line in comp_order.identified_lines]
+    if len(comp_order.coordinates.coeff) < 3:
+        return []
     y_fit = chebval(x, comp_order.coordinates.coeff)
     residuals = y - y_fit
     sigma = np.std(residuals, ddof=1)

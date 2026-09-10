@@ -1,4 +1,3 @@
-import numpy as np
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +18,8 @@ class Job:
     def __init__(
         self,
         observation_dir: Path | str,
-        order_file: str,
+        cmd_path: str | Path | None = None,
+        order_file: str | None = None,
         cosmic: bool = False,
         bias: bool = False,
         flat: bool = False,
@@ -41,7 +41,7 @@ class Job:
         self.ascii_2d_norm = ascii_2d_norm
         self.ascii_1d_norm = ascii_1d_norm
         self.order_file = order_file
-        self.store = Store(directory=self.observation_dir)
+        self.store = Store(directory=self.observation_dir, cmd_path=cmd_path)
 
 
     def _get_raw_data(self, observation: Any) -> list[int]:
@@ -77,9 +77,11 @@ class Job:
 
             for observation in self.store.stellar:
                 try:
-                    reporter.set_files_progress(file=observation)
+                    if reporter:
+                        reporter.set_files_progress(file=observation)
                     clean_cosmics(observation)
-                    reporter.set_files_progress(file=observation, done=True)
+                    if reporter:
+                        reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot clean cosmics from {observation.fits_file}: {exc}")
@@ -111,7 +113,7 @@ class Job:
 
         if reporter:
             reporter.set_status(name="orders", finished=False)
-        if "DEFAULT-ORDER-COORDINATES-MENU-ITEM" in str(self.order_file):
+        if "DEFAULT-ORDER-COORDINATES-MENU-ITEM" in str(self.order_file) or self.order_file is None:
             find_orders_coordinates(self.store)
         else:
             set_order_coordinates_from_file(self.store, self.order_file)
@@ -148,9 +150,11 @@ class Job:
 
         for observation in self.store.stellar:
             try:
-                reporter.set_files_progress(file=observation)
+                if reporter:
+                    reporter.set_files_progress(file=observation)
                 extract_2d_spectra(observation)
-                reporter.set_files_progress(file=observation, done=True)
+                if reporter:
+                    reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot extract 2D spectrum from {observation.fits_file}: {exc}")
@@ -180,9 +184,11 @@ class Job:
 
         for observation in self.store.stellar:
             try:
-                reporter.set_files_progress(file=observation)
+                if reporter:
+                    reporter.set_files_progress(file=observation)
                 calibrate_stellar(observation)
-                reporter.set_files_progress(file=observation, done=True)
+                if reporter:
+                    reporter.set_files_progress(file=observation, done=True)
             except Exception as exc:
                 if reporter:
                     reporter.warning(f"Cannot perform wavelength calibration for {observation.fits_file}: {exc}")
@@ -208,9 +214,11 @@ class Job:
 
             for observation in self.store.stellar:
                 try:
-                    reporter.set_files_progress(file=observation)
+                    if reporter:
+                        reporter.set_files_progress(file=observation)
                     normalize(observation)
-                    reporter.set_files_progress(file=observation, done=True)
+                    if reporter:
+                        reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot normalize {observation.fits_file}: {exc}")
@@ -225,9 +233,11 @@ class Job:
 
             for observation in self.store.stellar:
                 try:
-                    reporter.set_files_progress(file=observation)
+                    if reporter:
+                        reporter.set_files_progress(file=observation)
                     stitch_oned(observation)
-                    reporter.set_files_progress(file=observation, done=True)
+                    if reporter:
+                        reporter.set_files_progress(file=observation, done=True)
                 except Exception as exc:
                     if reporter:
                         reporter.warning(f"Cannot create 1D spectrum for {observation.fits_file}: {exc}")
@@ -244,7 +254,8 @@ class Job:
             reporter.set_status(name="save", finished=False)
 
         for observation in self.store.stellar:
-            reporter.set_files_progress(file=observation)
+            if reporter:
+                reporter.set_files_progress(file=observation)
             save_uncalibrated(observation=observation)
             save_uncalibrated(observation=observation, normalized=True)
             if self.fits_2d:
@@ -257,7 +268,8 @@ class Job:
                 save_as_2d_ascii(observation, normalized=True)
             if self.ascii_1d_norm:
                 save_as_1d_ascii_norm(observation)
-            reporter.set_files_progress(file=observation, done=True)
+            if reporter:
+                reporter.set_files_progress(file=observation, done=True)
 
         if reporter:
             reporter.set_status(name="save", finished=True)
