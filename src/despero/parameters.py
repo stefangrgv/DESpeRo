@@ -16,4 +16,4 @@ COMP_MATCHING_DISCARD_EDGE_N_ORDERS = 10
 # limit the number of automatically identified lines (otherwise it can grow up to a few hundred)
 COMP_MATCHING_KEEP_STRONGEST_N_LINES_IN_COMP = 6
 COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW = 30  # half-width in px
-COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW = 3  # half-width in px
+COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW_STRICT = 3  # half-width in px
