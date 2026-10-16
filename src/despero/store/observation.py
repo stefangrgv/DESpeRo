@@ -17,6 +17,7 @@ class Observation:
         exposure_time: float | int,
         readtime: float | int | None = None,
         rdnoise: float | int | None = None,
+        gain: float | int | None = None,
         load: bool = True,
     ):
         self.store = store
@@ -26,11 +27,14 @@ class Observation:
         self.exposure_time = exposure_time
         self.readtime = readtime
         self.rdnoise = rdnoise
+        self.gain = gain
+        self.variance = None  # per-pixel variance image (ADU^2), see initial_corrections.init_variance
         self.vhelio = None
         self.orders = []
         self.wavelength_calibrated = False
         self.oned_wavelength = []
         self.oned_intensity = []
+        self.oned_intensity_error = []
 
         if load:
             header, raw_data = load_fits(self.fits_file)
@@ -44,6 +48,9 @@ class Observation:
 
             if self.rdnoise is None:
                 self.rdnoise = self.header.get("RDNOISE", None)
+
+            if self.gain is None:
+                self.gain = self.header.get("GAIN", None)
 
             if exposure_type == EXPOSURE_TYPES.STELLAR:
                 try:

@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import find_peaks
 
+from despero.initial_corrections import init_variance
 from despero.parameters import (APERTURE_HEIGHT, CUTOFF,
                                 NUMBER_OF_ECHELLE_ORDERS)
 from despero.store.order import Order
@@ -121,6 +122,9 @@ def _extract_2d(store: Any, observation: Any) -> None:
     if observation.wavelength_calibrated:
         return
 
+    if observation.variance is None:
+        init_variance(observation)
+
     for coordinates in store.order_coordinates:
         order = Order(observation, coordinates)
         for i in range(len(coordinates.rows)):
@@ -128,12 +132,17 @@ def _extract_2d(store: Any, observation: Any) -> None:
             column = int(coordinates.columns[i])
 
             intensity_aggregate = [observation.raw_data[row][column]]
+            variance_aggregate = [observation.variance[row][column]]
             for j in range(1, APERTURE_HEIGHT):
                 if row + j < observation.raw_data.shape[0]:
                     intensity_aggregate.append(observation.raw_data[row + j][column])
+                    variance_aggregate.append(observation.variance[row + j][column])
                 if row - j >= 0:
                     intensity_aggregate.append(observation.raw_data[row - j][column])
+                    variance_aggregate.append(observation.variance[row - j][column])
             order.intensity.append(np.average(intensity_aggregate))
+            # error of the mean of N independent pixels: sqrt(sum(var)) / N
+            order.intensity_error.append(np.sqrt(np.sum(variance_aggregate)) / len(variance_aggregate))
         observation.orders.append(order)
     observation.wavelength_calibrated = True
 

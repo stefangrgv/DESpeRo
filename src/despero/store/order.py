@@ -12,8 +12,11 @@ class Order:
         self.coordinates = coordinates
         self.wavelength = []
         self.intensity = []
+        self.intensity_error = []
         self.normalized_uncalibrated_intensity = []
+        self.normalized_uncalibrated_intensity_error = []
         self.normalized_calibrated_intensity = []
+        self.normalized_calibrated_intensity_error = []
         self.identified_lines = []  # for comp only
         self.corresponding_standard_order = None
 

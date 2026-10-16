@@ -19,16 +19,20 @@ def normalize(observation: Any) -> None:
         try:
             continuum = _fit_continuum(order.coordinates.columns, order.intensity)
             observation.orders[i].normalized_uncalibrated_intensity = order.intensity / continuum
+            observation.orders[i].normalized_uncalibrated_intensity_error = order.intensity_error / continuum
         except Exception as e:
             print(f"\tCould not normalize uncalibrated order #{i}: {e}")
             observation.orders[i].normalized_calibrated_intensity = [np.NAN for _ in order.intensity]
+            observation.orders[i].normalized_uncalibrated_intensity_error = [np.NAN for _ in order.intensity]
         if len(order.wavelength):
             try:
                 continuum = _fit_continuum(order.wavelength, order.intensity)
                 observation.orders[i].normalized_calibrated_intensity = order.intensity / continuum
+                observation.orders[i].normalized_calibrated_intensity_error = order.intensity_error / continuum
             except Exception as e:
                 print(f"\tCould not normalize order #{i}: {e}")
                 observation.orders[i].normalized_calibrated_intensity = [np.NAN for _ in order.intensity]
+                observation.orders[i].normalized_calibrated_intensity_error = [np.NAN for _ in order.intensity]
 
 
 def stitch_oned(stellar: Any) -> None:
@@ -36,6 +40,7 @@ def stitch_oned(stellar: Any) -> None:
     wavelength = []
     intensity = []  # to keep track of the SNR
     n_intensity = []
+    n_error = []
     for order in reversed_orders:
         try:
             if len(wavelength) == 0 or order.wavelength[0] > wavelength[-1]:
@@ -43,6 +48,7 @@ def stitch_oned(stellar: Any) -> None:
                 wavelength = [*wavelength, *list(order.wavelength)]
                 intensity = [*intensity, *list(order.intensity)]
                 n_intensity = [*n_intensity, *list(order.normalized_calibrated_intensity)]
+                n_error = [*n_error, *list(order.normalized_calibrated_intensity_error)]
             else:
                 overlap_prev_ind = np.where(wavelength >= order.wavelength[0])[0]
                 overlap_next_ind = np.where(order.wavelength <= wavelength[-1])[0]
@@ -53,14 +59,17 @@ def stitch_oned(stellar: Any) -> None:
                     wavelength = [*wavelength, *list(order.wavelength[overlap_next_ind[-1] :])]
                     intensity = [*intensity, *list(order.intensity[overlap_next_ind[-1] :])]
                     n_intensity = [*n_intensity, *list(order.normalized_calibrated_intensity[overlap_next_ind[-1] :])]
+                    n_error = [*n_error, *list(order.normalized_calibrated_intensity_error[overlap_next_ind[-1] :])]
                 else:
                     keep_ind = [i for i in range(len(wavelength)) if i not in overlap_prev_ind]
                     wavelength = [*[wavelength[i] for i in keep_ind], *list(order.wavelength)]
                     intensity = [*[intensity[i] for i in keep_ind], *list(order.intensity)]
                     n_intensity = [*[n_intensity[i] for i in keep_ind], *list(order.normalized_calibrated_intensity)]
+                    n_error = [*[n_error[i] for i in keep_ind], *list(order.normalized_calibrated_intensity_error)]
         except IndexError:
             # current order has no wavelength solution, skip it
             continue
 
     stellar.oned_wavelength = np.asarray(wavelength)
     stellar.oned_intensity = np.asarray(n_intensity)
+    stellar.oned_intensity_error = np.asarray(n_error)
