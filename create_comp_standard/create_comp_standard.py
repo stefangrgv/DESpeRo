@@ -7,12 +7,13 @@ from lines import lines
 from numpy.polynomial.chebyshev import chebfit, chebval
 
 from despero.fit import fit_line_with_gaussian, gaussian
+from despero.parameters import COMP_CALIBRATION_MIN_LINES
 from despero.store.order_coordinates import OrderCoordinates
 from despero.utils import load_comp_standard
 
 LIVE_PLOT = False
 GAUSS_FIT_WINDOW = 20
-RESIDUAL_LIMIT = 0.005
+RESIDUAL_LIMIT = 0.01
 
 removed_lines = {}
 
@@ -75,59 +76,48 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
     order.intensity = np.asarray(order.intensity, dtype=np.float16)
 
     order_lines = lines.get(order_number, None)
-
-    # iteration start
     if order_lines is not None:
+        # fit the line peaks once; the iteration below only refits the wavelength solution
+        fitted_lines = []
+        for line in order_lines:
+            try:
+                gauss = fit_line_with_gaussian(
+                    order.coordinates.columns,
+                    order.intensity,
+                    line[0],
+                    strict=True,
+                )
+                fitted_lines.append((gauss["x0"], line[1], gauss))
+            except RuntimeError:  # gaussian fit did not converge, use line without fitting
+                fitted_lines.append((line[0], line[1], []))
+
+        # iteration start
         while True:
-            gauss_params = []
-            line_columns, line_wavelengths = [], []
-            for line in order_lines:
-                try:
-                    gauss = fit_line_with_gaussian(
-                        order.coordinates.columns,
-                        order.intensity,
-                        line[0],
-                        strict=True,
-                    )
-                    gauss_params.append(gauss)
-                    line_columns.append(gauss["x0"])
-                    line_wavelengths.append(line[1])
-                except RuntimeError as e:  # gaussian fit did not converge, use line without fitting
-                    # print(e)
-                    gauss_params.append([])
-                    line_columns.append(line[0])
-                    line_wavelengths.append(line[1])
-            order_lines = [(line_columns[i], line_wavelengths[i]) for i in range(len(line_columns))]
+            line_columns = [line[0] for line in fitted_lines]
+            line_wavelengths = [line[1] for line in fitted_lines]
+            deg = 1 if len(fitted_lines) <= 3 else 3
+            coeff = chebfit(line_columns, line_wavelengths, deg=deg)
+            residuals = np.abs(np.asarray(line_wavelengths) - chebval(line_columns, coeff))
+            worst = int(np.argmax(residuals))
 
-            # if order_number in [1, 61, 62, 63]:
-            if len(order_lines) <= 3:
-                coeff = chebfit(line_columns, line_wavelengths, deg=1)
-            else:
-                coeff = chebfit(line_columns, line_wavelengths, deg=3)
-
-            lines_with_residuals = []
-            for line in order_lines:
-                wl_known = line[1]
-                wl_fit = chebval([line[0]], coeff)[0]
-                resiudal = np.abs(wl_known - wl_fit)
-                lines_with_residuals.append([line, resiudal])
-
-            lines_with_residuals.sort(key=lambda x: x[1])
-
-            if len(lines_with_residuals) >= 3 and lines_with_residuals[-1][1] >= RESIDUAL_LIMIT:
+            if len(fitted_lines) > COMP_CALIBRATION_MIN_LINES and residuals[worst] >= RESIDUAL_LIMIT:
                 # remove the worst line
-                print(f"Order #{order_number}: removing line {lines_with_residuals[-1][0][1]:.3f}, residual is {lines_with_residuals[-1][1]:.3f}")
+                print(f"Order #{order_number}: removing line {line_wavelengths[worst]:.3f}, residual is {residuals[worst]:.3f}")
                 removed_lines[order_number] = removed_lines[order_number] + 1
-                order_lines = [line for line, _ in lines_with_residuals[0:-1]]
+                fitted_lines.pop(worst)
             else:
                 break
 
         # iteration end
+        if len(fitted_lines) == deg + 1:
+            # the fit passes through every line exactly, so bad lines cannot be detected
+            print(f"Order #{order_number}: unchecked, only {len(fitted_lines)} lines for a deg={deg} fit")
         order.coordinates.coeff = coeff
-        order.coordinates.lines = order_lines
-            
+        order.coordinates.lines = [(line[0], line[1]) for line in fitted_lines]
+
         if LIVE_PLOT:
-            plot_order(comp_standard, order_number, gauss_params, order_lines)
+            gauss_params = [line[2] for line in fitted_lines]
+            plot_order(comp_standard, order_number, gauss_params, order.coordinates.lines)
 
 
 def create_comp_standard() -> None:
@@ -146,4 +136,4 @@ if __name__ == "__main__":
         print(f"{key}:\t{value}")
         total += value
     print(f"Total: {total}")
-    np.save("residualized_comp_standard.npy", comp_standard, allow_pickle=True)
+    np.save("comp_standard.npy", comp_standard, allow_pickle=True)
