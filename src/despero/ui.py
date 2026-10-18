@@ -281,7 +281,7 @@ class UI(ReporterBase):
             self.start_button.config(state=tk.DISABLED)
 
     def _select_directory(self) -> None:
-        observations_dir = askdirectory(initialdir="/home/stefan/science/ESPERO/data/20250603")
+        observations_dir = askdirectory()
         if not observations_dir:
             return
         if "Journal.txt" in os.listdir(observations_dir):
@@ -324,3 +324,6 @@ class UI(ReporterBase):
         browse_files_when_done = True
         thread = threading.Thread(target=job.start, args=(self, browse_files_when_done))
         thread.start()
+
+    def export_raw_data(self, flats, stellar):
+        pass

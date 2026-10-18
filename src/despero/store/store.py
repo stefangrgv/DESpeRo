@@ -10,9 +10,13 @@ from despero.store.observation import Observation
 
 
 class Store:
-    def __init__(self, directory: str):
+    def __init__(self, directory: str, cmd_path: str | Path | None = None):
         self.directory = directory
-        self.output_directory = Path(directory) / "reduced"
+        if cmd_path:
+            self.output_directory = Path(cmd_path) / "reduced" / directory.name
+            self.output_directory.mkdir(exist_ok=True, parents=True)
+        else:
+            self.output_directory = Path(directory) / "reduced"
 
         # individual exposures
         self.bias = []

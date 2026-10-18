@@ -7,9 +7,8 @@ from astropy.wcs import WCS
 
 
 def save_as_fits(observation: Any, normalized: bool = False) -> None:
-    output_dir = Path(os.path.dirname(observation.fits_file))
     output_filename_base = os.path.basename(observation.fits_file.stem.replace(".fits", "").replace(".FITS", ""))
-    output_dir = output_dir / "reduced" / "2d"
+    output_dir = observation.store.output_directory / "2d"
     if normalized:
         output_dir = output_dir / "fits_normalized" / output_filename_base
     else:
@@ -20,7 +19,7 @@ def save_as_fits(observation: Any, normalized: bool = False) -> None:
     for i in range(len(observation.orders)):
         try:
             if normalized:
-                flux_array = observation.orders[i].normalized_intensity
+                flux_array = observation.orders[i].normalized_calibrated_intensity
             else:
                 flux_array = observation.orders[i].intensity
             wavelength = observation.orders[i].wavelength

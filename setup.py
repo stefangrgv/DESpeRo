@@ -13,5 +13,6 @@ setup(
         "astroscrappy==1.2.0",
         "astropy-iers-data==0.2024.3.18.0.29.47",
         "scipy==1.15.1",
+        "matplotlib==3.10.8",
     ],
 )

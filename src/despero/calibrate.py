@@ -6,6 +6,8 @@ from numpy.polynomial.chebyshev import chebfit, chebval
 from despero.fit import (fit_line_with_gaussian, get_finetuned_chebyshev,
                          is_fit_ok)
 from despero.match_comp_orders import get_comp_and_standard_matching_orders
+from despero.parameters import (COMP_CALIBRATION_MIN_LINES,
+                                COMP_CALIBRATION_RESIDUAL_LIMIT)
 from despero.store.line import Line
 from despero.store.order import Order
 
@@ -59,40 +61,51 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
     return lines_column, lines_wavelength
 
 
-def _solve_wavelength(comp_order, standard_order, shift):
-    lines_column = [line.column for line in comp_order.identified_lines]
-    lines_wavelength = [line.wavelength for line in comp_order.identified_lines]
-    n_lines = len(lines_column)
+def _fit_solution(standard_order: Order, lines_column: list, lines_wavelength: list) -> np.ndarray:
+    if len(lines_column) >= 3:
+        return get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff).coef
+    # if there are fewer than 3 lines in the comp, don't try to fit a cheby with deg=3, even if the standard has it
+    return chebfit(lines_column, lines_wavelength, deg=1)
 
-    if n_lines >= 2:
-        if n_lines >= 3:
-            cheby_fit = get_finetuned_chebyshev(lines_column, lines_wavelength, standard_order.coordinates.coeff)
-            comp_order.coordinates.coeff = cheby_fit.coef
-            comp_order.wavelength = cheby_fit(np.asarray(comp_order.coordinates.columns))
-        # if there are fewer than 3 lines in the comp, don't try to fit a cheby with deg=3, even if the standard has it
-        else:
-            coeff = chebfit(lines_column, lines_wavelength, deg=1)
-            comp_order.coordinates.coeff = coeff
-            comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
-    else:  # not enough lines to get a solution: use the shift-corrected standard instead
+
+def _solve_wavelength(comp_order: Order, standard_order: Order, shift: float) -> None:
+    lines = list(comp_order.identified_lines)
+    removed_lines = 0
+    max_residual = None
+
+    # iteratively remove the line with the largest residual until all lines are within the limit
+    while len(lines) >= 2:
+        lines_column = [line.column for line in lines]
+        lines_wavelength = [line.wavelength for line in lines]
+        coeff = _fit_solution(standard_order, lines_column, lines_wavelength)
+        residuals = np.abs(np.asarray(lines_wavelength) - chebval(lines_column, coeff))
+        worst = int(np.argmax(residuals))
+        if residuals[worst] > COMP_CALIBRATION_RESIDUAL_LIMIT and len(lines) > COMP_CALIBRATION_MIN_LINES:
+            removed_lines += 1
+            lines.pop(worst)
+            continue
+        max_residual = residuals[worst]
+        comp_order.coordinates.coeff = coeff
+        comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
+        break
+    comp_order.identified_lines = lines
+
+    if max_residual is None:  # not enough lines to get a solution: use the shift-corrected standard instead
         lines_column = [line.column - shift for line in standard_order.identified_lines if line.column >= shift]
         lines_wavelength = [line.wavelength for line in standard_order.identified_lines if line.column >= shift]
-        if n_lines > 0:
-            deg = 3 if n_lines > 2 else 1
+        if len(lines_column) >= 2:
+            deg = 3 if len(lines_column) > 3 else 1
             coeff = chebfit(lines_column, lines_wavelength, deg=deg)
             comp_order.coordinates.coeff = coeff
             comp_order.wavelength = chebval(np.asarray(comp_order.coordinates.columns), coeff)
-
-def _filter_lines(comp_order):
-    x = [line.column for line in comp_order.identified_lines]
-    y = [line.wavelength for line in comp_order.identified_lines]
-    y_fit = chebval(x, comp_order.coordinates.coeff)
-    residuals = y - y_fit
-    sigma = np.std(residuals, ddof=1)
-    mask = np.abs(residuals) < 3 * sigma
-    filtered_lines_array = np.asarray(comp_order.identified_lines)[mask]
-    # also check if wl increases monotonically, if not - remove the line with the largest std
-    return filtered_lines_array.tolist()
+        print(f"Order #{comp_order.coordinates.number}: too few comp lines, using shift-corrected standard")
+    else:
+        # with no more lines than coefficients the fit is (nearly) exact, so bad lines cannot be detected
+        unchecked = " (unchecked: too few lines)" if len(lines) <= len(comp_order.coordinates.coeff) else ""
+        print(
+            f"Order #{comp_order.coordinates.number}: removed {removed_lines} lines, "
+            f"{len(lines)} lines left, max residual {max_residual:.4f}{unchecked}"
+        )
 
 
 def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
@@ -126,35 +139,7 @@ def calibrate_comp_spectra(comp: Any, comp_standard: Any) -> None:
         ]
         comp_order.corresponding_standard_order = standard_order
 
-        c = 0
-        iterate = True
-        while iterate:
-            _solve_wavelength(comp_order=comp_order, standard_order=standard_order, shift=shift)
-            filtered_lines = _filter_lines(comp_order=comp_order)
-            iterate = len(comp_order.identified_lines) != len(filtered_lines)
-            c += 1
-            comp_order.identified_lines = filtered_lines
-
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots(nrows=3, sharex=True)
-        # ax[2].plot(standard_order.coordinates.columns, standard_order.intensity, color="purple")
-        # for line in standard_order.identified_lines:
-        #     ax[2].axvline(line.column, color='red', ls='--')
-        #     ax[2].text(x=line.column + 2, y=2*np.mean(standard_order.intensity), s=f"{line.wavelength:.2f}")
-        # ax[1].plot(comp_order.coordinates.columns, comp_order.intensity, color="black")
-        # for line in comp_order.identified_lines:
-        #     ax[1].axvline(line.column, color='red', ls='--')
-        #     ax[1].text(x=line.column + 2, y=2*np.mean(comp_order.intensity), s=f"{line.wavelength:.2f}")
-        # try:
-        #     ax[0].set_title(f"Order {i_comp}: {int(comp_order.wavelength[0])}:{int(comp_order.wavelength[-1])}")
-        # except Exception:
-        #     ax[0].set_title(f"Order {i_comp}")
-        # try:
-        #     ax[0].plot(comp_order.coordinates.columns, comp_order.wavelength, color="black")
-        # except Exception:
-        #     print("no wavelength solution")
-        # print(comp_order.coordinates.coeff)
-        # plt.show()
+        _solve_wavelength(comp_order=comp_order, standard_order=standard_order, shift=shift)
 
 
 def get_comp_for_stellar(store: Any) -> None:
@@ -168,6 +153,6 @@ def get_comp_for_stellar(store: Any) -> None:
 
 
 def calibrate_stellar(stellar: Any) -> None:
-    for order_number in range(len(stellar.orders)):
+    for number in range(len(stellar.orders)):
         comp = stellar.store.comp[stellar.comp_index]
-        stellar.orders[order_number].wavelength = comp.orders[order_number].wavelength
+        stellar.orders[number].wavelength = comp.orders[number].wavelength

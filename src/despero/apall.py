@@ -1,8 +1,11 @@
+import json
 from typing import Any
+from pathlib import Path
 
 import numpy as np
 from scipy.signal import find_peaks
 
+from despero.initial_corrections import init_variance
 from despero.parameters import (APERTURE_HEIGHT, CUTOFF,
                                 NUMBER_OF_ECHELLE_ORDERS)
 from despero.store.order import Order
@@ -99,9 +102,28 @@ def find_orders_coordinates(store: Any, degree: int = 10, draw: bool = False) ->
         store.order_coordinates.append(coordinates)
 
 
+def set_order_coordinates_from_file(store: Any, file_path: Path | str) -> None:
+    file_path = Path(file_path)
+    with open(file_path) as stream:
+        file_contents = json.load(stream)
+
+    _store_coordinates = []
+    data = store.stellar[0].raw_data
+    for i in sorted(file_contents.keys()):
+        columns = np.linspace(CUTOFF, data.shape[1] - 1 - CUTOFF, data.shape[1] - 2 * CUTOFF, dtype=int)
+        coeffs = file_contents[i]["coefficients"]
+        polynomial = np.poly1d(list(reversed(coeffs)))
+        rows = polynomial(columns)
+        coordinates = OrderCoordinates(i, rows, columns)
+        _store_coordinates.append(coordinates)
+    store.order_coordinates = _store_coordinates
+
 def _extract_2d(store: Any, observation: Any) -> None:
     if observation.wavelength_calibrated:
         return
+
+    if observation.variance is None:
+        init_variance(observation)
 
     for coordinates in store.order_coordinates:
         order = Order(observation, coordinates)
@@ -110,12 +132,17 @@ def _extract_2d(store: Any, observation: Any) -> None:
             column = int(coordinates.columns[i])
 
             intensity_aggregate = [observation.raw_data[row][column]]
+            variance_aggregate = [observation.variance[row][column]]
             for j in range(1, APERTURE_HEIGHT):
                 if row + j < observation.raw_data.shape[0]:
                     intensity_aggregate.append(observation.raw_data[row + j][column])
+                    variance_aggregate.append(observation.variance[row + j][column])
                 if row - j >= 0:
                     intensity_aggregate.append(observation.raw_data[row - j][column])
+                    variance_aggregate.append(observation.variance[row - j][column])
             order.intensity.append(np.average(intensity_aggregate))
+            # error of the mean of N independent pixels: sqrt(sum(var)) / N
+            order.intensity_error.append(np.sqrt(np.sum(variance_aggregate)) / len(variance_aggregate))
         observation.orders.append(order)
     observation.wavelength_calibrated = True
 
