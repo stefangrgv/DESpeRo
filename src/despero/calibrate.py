@@ -33,7 +33,7 @@ def _get_gaussian_fits_for_lines(comp_order: Order, standard_order: Order, shift
             continue
         try:
             line_fit_coeffs = fit_line_with_gaussian(
-                comp_order.coordinates.columns, comp_intensity, int(line[0] - shift)
+                comp_order.coordinates.columns, comp_intensity, int(line[0] - shift), strict=True
             )
             fit_ok = is_fit_ok(line_fit_coeffs)
             is_line_peak_prominent = line_fit_coeffs["a"] >= 0.001

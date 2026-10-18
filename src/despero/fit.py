@@ -15,9 +15,9 @@ def fit_line_with_gaussian(
     col: List[int] | np.ndarray, intensity: List[float | int] | np.ndarray, approx_peak: float, strict: bool = False
 ) -> dict:
     if strict:
-        max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
-    else:
         max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW_STRICT
+    else:
+        max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
 
     col = np.asarray(col)
     intensity = np.asarray(intensity)
