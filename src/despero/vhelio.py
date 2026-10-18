@@ -18,8 +18,13 @@ def correct_vhelio(observation: Any):
     altitude = 1759
     rozhen = EarthLocation.from_geodetic(longitude, latitude, altitude)
 
+    if observation.jd is None:
+        raise ValueError("no usable JD-OBS")
+
     target = SkyCoord(observation.ra, observation.dec, unit=(u.hourangle, u.deg))
     jd = Time(observation.jd, format="jd")
     observation.vhelio = target.radial_velocity_correction(obstime=jd, location=rozhen).to("km/s").value
+    observation.header["VHELIO"] = (observation.vhelio, "applied heliocentric correction (km/s)")
+    observation.header["VHJD"] = (observation.jd, "JD used for the VHELIO correction")
     for i in range(len(observation.orders)):
         observation.orders[i].wavelength = _remove_doppler_shift(observation.orders[i].wavelength, observation.vhelio)

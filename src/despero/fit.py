@@ -1,8 +1,7 @@
 from typing import List
 
 import numpy as np
-from numpy.polynomial.chebyshev import Chebyshev, chebval
-from scipy.optimize import curve_fit, least_squares
+from scipy.optimize import curve_fit
 
 from despero.parameters import COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW, COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW_STRICT
 
@@ -15,9 +14,9 @@ def fit_line_with_gaussian(
     col: List[int] | np.ndarray, intensity: List[float | int] | np.ndarray, approx_peak: float, strict: bool = False
 ) -> dict:
     if strict:
-        max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
-    else:
         max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW_STRICT
+    else:
+        max_half_width = COMP_LINE_IDENTIFICATION_FIT_WINDOW_HW
 
     col = np.asarray(col)
     intensity = np.asarray(intensity)
@@ -81,18 +80,3 @@ def is_fit_ok(fit_coeffs: List[float]) -> bool:
     )
     return np.all(relative_errors <= 0.5)
 
-
-def get_finetuned_chebyshev(
-    x: List[float] | np.ndarray, y: List[float] | np.ndarray, initial_coeffs: List[float]
-) -> np.ndarray:
-    def residuals(coeffs, x_new, y_new, lambda_reg=0.01):
-        # Compute the difference between the new dataset and the adjusted model
-        model_vals = chebval(x_new, coeffs)
-        data_residuals = model_vals - y_new
-        # Regularization term: Penalize large deviations from the original fit
-        reg_residuals = lambda_reg * (coeffs - initial_coeffs)
-
-        return np.concatenate([data_residuals, reg_residuals])
-
-    result = least_squares(residuals, initial_coeffs, args=(x, y))
-    return Chebyshev(result.x)

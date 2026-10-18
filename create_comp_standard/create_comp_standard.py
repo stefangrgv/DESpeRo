@@ -6,14 +6,17 @@ import numpy as np
 from lines import lines
 from numpy.polynomial.chebyshev import chebfit, chebval
 
+from despero.echelle import COLUMN_CENTER, SPEED_OF_LIGHT, fit_echelle_solution
 from despero.fit import fit_line_with_gaussian, gaussian
-from despero.parameters import COMP_CALIBRATION_MIN_LINES
+from despero.parameters import ECHELLE_FIT_DEGREE_COLUMN
 from despero.store.order_coordinates import OrderCoordinates
 from despero.utils import load_comp_standard
 
 LIVE_PLOT = False
 GAUSS_FIT_WINDOW = 20
-RESIDUAL_LIMIT = 0.01
+RESIDUAL_LIMIT = 0.01  # in A, only for coloring the residuals in the plots
+# orders taken from a different ThAr exposure than the rest (commit ba612ef): each gets a free zero point in the 2D fit
+SPLICED_ORDERS = [0, 1, 60, 61, 62, 63]
 
 removed_lines = {}
 
@@ -61,8 +64,7 @@ def plot_order(comp_standard: Any, order_number: int, gauss_params: list[dict], 
     plt.show()
 
 
-def calibrate_order(comp_standard: Any, order_number: int) -> None:
-    removed_lines[order_number] = 0
+def fit_order_lines(comp_standard: Any, order_number: int) -> list:
     order = comp_standard.orders[order_number]
     # for compability with old file format
     order.coordinates = OrderCoordinates(
@@ -75,55 +77,72 @@ def calibrate_order(comp_standard: Any, order_number: int) -> None:
     order.intensity -= np.min(order.intensity)
     order.intensity = np.asarray(order.intensity, dtype=np.float16)
 
-    order_lines = lines.get(order_number, None)
-    if order_lines is not None:
-        # fit the line peaks once; the iteration below only refits the wavelength solution
-        fitted_lines = []
-        for line in order_lines:
-            try:
-                gauss = fit_line_with_gaussian(
-                    order.coordinates.columns,
-                    order.intensity,
-                    line[0],
-                    strict=True,
-                )
-                fitted_lines.append((gauss["x0"], line[1], gauss))
-            except RuntimeError:  # gaussian fit did not converge, use line without fitting
-                fitted_lines.append((line[0], line[1], []))
-
-        # iteration start
-        while True:
-            line_columns = [line[0] for line in fitted_lines]
-            line_wavelengths = [line[1] for line in fitted_lines]
-            deg = 1 if len(fitted_lines) <= 3 else 3
-            coeff = chebfit(line_columns, line_wavelengths, deg=deg)
-            residuals = np.abs(np.asarray(line_wavelengths) - chebval(line_columns, coeff))
-            worst = int(np.argmax(residuals))
-
-            if len(fitted_lines) > COMP_CALIBRATION_MIN_LINES and residuals[worst] >= RESIDUAL_LIMIT:
-                # remove the worst line
-                print(f"Order #{order_number}: removing line {line_wavelengths[worst]:.3f}, residual is {residuals[worst]:.3f}")
-                removed_lines[order_number] = removed_lines[order_number] + 1
-                fitted_lines.pop(worst)
-            else:
-                break
-
-        # iteration end
-        if len(fitted_lines) == deg + 1:
-            # the fit passes through every line exactly, so bad lines cannot be detected
-            print(f"Order #{order_number}: unchecked, only {len(fitted_lines)} lines for a deg={deg} fit")
-        order.coordinates.coeff = coeff
-        order.coordinates.lines = [(line[0], line[1]) for line in fitted_lines]
-
-        if LIVE_PLOT:
-            gauss_params = [line[2] for line in fitted_lines]
-            plot_order(comp_standard, order_number, gauss_params, order.coordinates.lines)
+    # fit the line peaks; lines whose fit does not converge are used at their listed column
+    fitted_lines = []
+    for line in lines.get(order_number, []):
+        try:
+            gauss = fit_line_with_gaussian(order.coordinates.columns, order.intensity, line[0], strict=True)
+            fitted_lines.append((gauss["x0"], line[1], gauss))
+        except RuntimeError:
+            fitted_lines.append((line[0], line[1], []))
+    return fitted_lines
 
 
-def create_comp_standard() -> None:
+def get_first_echelle_order(fitted_lines: dict[int, list]) -> int:
+    """Absolute echelle order of standard order #0, from the spacing of neighbouring orders: m * l_m = (m + 1) * l_m+1."""
+    centers = {}
+    for order_number, order_lines in fitted_lines.items():
+        if len(order_lines) >= 2:
+            coeff = np.polyfit([line[0] for line in order_lines], [line[1] for line in order_lines], deg=1)
+            centers[order_number] = np.polyval(coeff, COLUMN_CENTER)
+    estimates = [
+        centers[i + 1] / (centers[i] - centers[i + 1]) - i for i in centers if i + 1 in centers
+    ]
+    return int(round(np.median(estimates)))
+
+
+def create_comp_standard() -> Any:
     comp_standard = load_comp_standard()
-    for i in range(len(comp_standard.orders)):
-        calibrate_order(comp_standard, i)
+    fitted_lines = {i: fit_order_lines(comp_standard, i) for i in range(len(comp_standard.orders))}
+
+    first_order = get_first_echelle_order(fitted_lines)
+    print(f"Standard order #0 is echelle order m={first_order}")
+    for i, order in enumerate(comp_standard.orders):
+        order.echelle_order = first_order + i
+
+    all_lines = [(i, line) for i, order_lines in fitted_lines.items() for line in order_lines]
+    solution, keep, residuals = fit_echelle_solution(
+        columns=[line[0] for _, line in all_lines],
+        orders=[first_order + i for i, _ in all_lines],
+        wavelengths=[line[1] for _, line in all_lines],
+        free_orders=[first_order + i for i in SPLICED_ORDERS],
+    )
+    zero_points = [
+        f"m={m}: {offset / (m * solution.wavelength(COLUMN_CENTER, m)[0]) * SPEED_OF_LIGHT:+.1f}"
+        for m, offset in solution.offsets.items()
+    ]
+    print(
+        f"2D wavelength solution from {keep.sum()}/{len(keep)} lines, rms {np.std(residuals[keep]):.3f} km/s; "
+        f"zero points of spliced orders (km/s): {', '.join(zero_points)}"
+    )
+
+    kept_lines = {i: [] for i in fitted_lines}
+    for (i, line), kept, residual in zip(all_lines, keep, residuals):
+        if kept:
+            kept_lines[i].append(line)
+        else:
+            removed_lines[i] = removed_lines.get(i, 0) + 1
+            print(f"Order #{i}: removing line {line[1]:.4f} at column {line[0]:.1f}, residual is {residual:+.2f} km/s")
+
+    for i, order in enumerate(comp_standard.orders):
+        columns = np.asarray(order.coordinates.columns, dtype=np.float64)
+        order.wavelength = solution.wavelength(columns, order.echelle_order)
+        order.coordinates.coeff = chebfit(columns, order.wavelength, deg=ECHELLE_FIT_DEGREE_COLUMN)
+        order.coordinates.lines = [(line[0], line[1]) for line in kept_lines[i]]
+        removed_lines.setdefault(i, 0)
+        if LIVE_PLOT and kept_lines[i]:
+            plot_order(comp_standard, i, [line[2] for line in kept_lines[i]], order.coordinates.lines)
+    comp_standard.echelle_solution = solution.to_dict()
 
     return comp_standard
 
@@ -132,7 +151,7 @@ if __name__ == "__main__":
     matplotlib.use("TkAgg")
     comp_standard = create_comp_standard()
     total = 0
-    for key, value in removed_lines.items():
+    for key, value in sorted(removed_lines.items()):
         print(f"{key}:\t{value}")
         total += value
     print(f"Total: {total}")

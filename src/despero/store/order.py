@@ -19,6 +19,7 @@ class Order:
         self.normalized_calibrated_intensity_error = []
         self.identified_lines = []  # for comp only
         self.corresponding_standard_order = None
+        self.echelle_order = None  # absolute echelle order number m
 
     def get_line_pairs(self):
         pairs = []
