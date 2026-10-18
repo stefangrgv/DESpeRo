@@ -107,14 +107,33 @@ def set_order_coordinates_from_file(store: Any, file_path: Path | str) -> None:
     with open(file_path) as stream:
         file_contents = json.load(stream)
 
+    def warn(text: str) -> None:
+        if store.reporter:
+            store.reporter.warning(text)
+
     _store_coordinates = []
-    data = store.stellar[0].raw_data
-    for i in sorted(file_contents.keys()):
-        columns = np.linspace(CUTOFF, data.shape[1] - 1 - CUTOFF, data.shape[1] - 2 * CUTOFF, dtype=int)
+    # any frame gives the image shape; the master flat exists even without stellar frames
+    data = store.master_flats[0].raw_data if store.master_flats else store.stellar[0].raw_data
+    height, width = data.shape
+    # JSON keys are strings: sort numerically, otherwise "10" comes before "2"
+    for i in sorted(file_contents.keys(), key=int):
         coeffs = file_contents[i]["coefficients"]
+        if len(coeffs) == 0:
+            # an order without a fit would be the zero polynomial, i.e. row 0
+            warn(f"Order {i} in {file_path.name} has no fit, skipping it")
+            continue
+        columns = np.linspace(CUTOFF, width - 1 - CUTOFF, width - 2 * CUTOFF, dtype=int)
         polynomial = np.poly1d(list(reversed(coeffs)))
-        rows = polynomial(columns)
-        coordinates = OrderCoordinates(i, rows, columns)
+        # round like the order editor draws the fit
+        rows = np.rint(polynomial(columns)).astype(int)
+        inside = (rows >= 0) & (rows < height)
+        if not inside.any():
+            warn(f"Order {i} in {file_path.name} lies outside the image, skipping it")
+            continue
+        if not inside.all():
+            warn(f"Order {i} in {file_path.name}: {np.count_nonzero(~inside)} columns outside the image were dropped")
+            rows, columns = rows[inside], columns[inside]
+        coordinates = OrderCoordinates(int(i), rows, columns)
         _store_coordinates.append(coordinates)
     store.order_coordinates = _store_coordinates
 
