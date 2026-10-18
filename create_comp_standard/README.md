@@ -15,3 +15,7 @@ The line positions must be described in the `lines.py` file in the same format a
 
 You can use the script `create_comp_standard.py` to then create the final comparison standard, as well as to check your solution using the plots provided for each echelle order.
 
+The script fits one 2D wavelength solution to the lines of all orders together (`wavelength * m = P(column, m)`, where `m` is the absolute echelle order; see `src/despero/echelle.py`). The absolute order number is worked out from the spacing of neighbouring orders. Lines that do not fit the global solution are rejected and listed in the output with their residuals in km/s; a line rejected with a large residual is usually misidentified in `lines.py` and should be corrected or removed. Only the lines that were kept are used to calibrate the comparison spectra of each night, and the solution itself is stored in the standard and used as a fallback when a night's comparison spectrum has too few lines.
+
+Orders listed in `SPLICED_ORDERS` were extracted from a different exposure than the rest, so they are shifted by a few pixels; each of them gets its own zero point in the 2D fit. If the standard is ever re-extracted from a single exposure, empty this list.
+
